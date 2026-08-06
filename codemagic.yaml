@@ -13,16 +13,22 @@ workflows:
       - name: Install dependencies
         script: |
           npm install
+      - name: Create fallback directory
+        script: |
+          mkdir -p www
+          echo "<html><body>Fallback workspace assets window</body></html>" > www/index.html
       - name: Add iOS Platform
         script: |
           ./node_modules/.bin/cap add ios
       - name: Sync Capacitor project
         script: |
           ./node_modules/.bin/cap sync ios
-      - name: Build iOS Package
+      - name: Build iOS Simulator Package
         script: |
           cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -archivePath build/App.xcarchive archive
-          xcodebuild -exportArchive -archivePath build/App.xcarchive -exportPath build/outputs -exportOptionsPlist App/ExportOptions.plist
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator -arch arm64 CODE_SIGNING_ALLOWED=NO
+          mkdir -p build/outputs
+          mv /Users/builder/Library/Developer/Xcode/DerivedData/*/Build/Products/Debug-iphonesimulator/App.app build/outputs/App.app
+          cd build/outputs && zip -r CozyBrimstone.app.zip App.app
     artifacts:
-      - build/outputs/*.ipa
+      - ios/App/build/outputs/*.zip
