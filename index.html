@@ -661,6 +661,10 @@
       <span class="bicon">🪖</span>
       <span class="bname">The Chieftain's War Room</span><span class="bdesc">Prestige & Ashen Trials</span>
     </div>
+    <div class="building-btn" data-b="armory" style="grid-column: 1 / -1;">
+      <span class="bicon">⚒️</span>
+      <span class="bname">The Armory</span><span class="bdesc">Craft Equipment</span>
+    </div>
   </div>
 </div>
 
@@ -719,10 +723,21 @@
     hellPortalLevel: 0,
     hellPortalBest: 0,
     ashenTrials: { eternalNight: false, goldless: false, chilledEarth: false, bloodCovenant: false, loneChieftain: false },
+    achievements: {},
     scavengerKills: 0,
     noDamageStreak: 0,
     tookDamageThisWave: false,
-    prestige: { shards: 0, count: 0, totalShardsEarned: 0, tier: 0, upgrades: { embermight: 0, hearthward: 0, quickstart: 0, slayer: 0, treasurelust: 0, ascension: 0, sovereignty: 0, portalattune: 0 } },
+    prestige: { shards: 0, count: 0, totalShardsEarned: 0, tier: 0, upgrades: { embermight: 0, hearthward: 0, quickstart: 0, slayer: 0, treasurelust: 0, ascension: 0, sovereignty: 0, portalattune: 0, geartech: 0 } },
+    grandPrestige: {
+      cores: 0, ritualCount: 0,
+      nodes: { autoStoke: 0, chiefsSteward: 0, layoutArchive: 0, infiniteAuto: 0,
+        ancestralBlueprint: 0, primalSynergy: 0, coreExpansion: 0, divineAscendant: 0,
+        eternalFoundations: 0, earthShaper: 0, riftHarmonizer: 0, sovereignOverlord: 0 }
+    },
+    preservedItem: null, // { hero, item } for Ancestral Blueprint
+    savedLayout: null, // array of { idx, defId, towerLevel } for Layout Archive
+    sovereignChoice: null, // trial key for Sovereign Overlord
+    craftedEquip: {},
     wave: 1, hearthHp: 100, hearthMaxHp: 100, tutorialSeen: false,
     waveEnemiesTotal: 10, waveEnemiesSpawned: 0,
     slots: SLOT_PERCENTS.map(function(p, idx) { return { percent: p, side: idx % 2 === 0 ? -36 : 36, occupant: null }; }),
@@ -800,7 +815,15 @@
     ability: function() { playTone(220, 0.3, 'sine', 0.18); playTone(440, 0.25, 'sine', 0.14, 0.05); },
     click: function() { playTone(600, 0.035, 'square', 0.06); },
     save: function() { playTone(880, 0.08, 'sine', 0.14, 0); playTone(1200, 0.1, 'sine', 0.14, 0.06); },
-    gameOver: function() { playTone(220, 0.3, 'sawtooth', 0.22, 0); playTone(196, 0.3, 'sawtooth', 0.22, 0.2); playTone(147, 0.5, 'sawtooth', 0.28, 0.4); }
+    gameOver: function() { playTone(220, 0.3, 'sawtooth', 0.22, 0); playTone(196, 0.3, 'sawtooth', 0.22, 0.2); playTone(147, 0.5, 'sawtooth', 0.28, 0.4); },
+    treasureSpawn: function() {
+      haptic([15, 40, 15, 40, 15]);
+      playTone(1318, 0.09, 'sine', 0.22, 0);
+      playTone(1568, 0.09, 'sine', 0.22, 0.07);
+      playTone(1976, 0.09, 'sine', 0.22, 0.14);
+      playTone(2637, 0.22, 'sine', 0.26, 0.21);
+      playTone(2093, 0.12, 'triangle', 0.14, 0.24);
+    }
   };
 
   var upgradeDefs = [
@@ -1157,33 +1180,72 @@
     }
   }
 
+  var ARMORY_HERO_LABELS = { gideon: '🪓 Gideon', dwarf: '🧨 Durgan', warlock: '🔥 Ember', archer: '🏹 Hazel', frost: '❄️ Bramble' };
+  function openArmory() {
+    var craftedCount = Object.keys(state.craftedEquip).filter(function(k) { return state.craftedEquip[k]; }).length;
+    var html = '<h2>⚒️ The Armory</h2>';
+    html += '<div class="ug-intro">Craft equipment here before it can be equipped on a tower. Each piece is a one-time craft — once made, it\'s yours forever, on every tower of that hero.</div>';
+    html += '<div class="ug-intro">' + craftedCount + '/' + Object.keys(EQUIPMENT_DEFS).length + ' items crafted.</div>';
+    ['gideon', 'dwarf', 'warlock', 'archer', 'frost'].forEach(function(heroKey) {
+      html += '<div class="ug-section-title">' + ARMORY_HERO_LABELS[heroKey] + '</div>';
+      equipItemsForHero(heroKey).forEach(function(id) {
+        var def = EQUIPMENT_DEFS[id];
+        var crafted = !!state.craftedEquip[id];
+        var afford = !crafted && canAfford(def.cost);
+        html += '<div class="ug-row' + (crafted ? ' maxed' : afford ? ' affordable' : '') + '" id="craft-' + id + '">' +
+          '<div class="ug-top"><span class="ug-name">' + def.icon + ' ' + def.name + '</span><span class="ug-level-tag">' + (crafted ? 'Crafted ✓' : '') + '</span></div>' +
+          '<div class="ug-desc">' + def.desc + '</div>' +
+          (crafted ? '' : '<div class="ug-footer cost">' + costLabel(def.cost) + '</div>') + '</div>';
+      });
+    });
+    openModal(html);
+    Object.keys(EQUIPMENT_DEFS).forEach(function(id) {
+      if (state.craftedEquip[id]) return;
+      var row = document.getElementById('craft-' + id);
+      row.addEventListener('click', function() {
+        var def = EQUIPMENT_DEFS[id];
+        if (!canAfford(def.cost)) return;
+        pay(def.cost);
+        state.craftedEquip[id] = true;
+        SFX.levelUp();
+        renderResources(); save();
+        openArmory();
+      });
+    });
+  }
+
   function openEquipMenu(i) {
     var slot = state.slots[i];
     var occ = slot.occupant;
     if (!occ || !TOWER_HERO_CATEGORY[occ.defId]) return;
     var heroKey = TOWER_HERO_CATEGORY[occ.defId];
-    var items = equipItemsForHero(heroKey);
+    var items = grandLvl('divineAscendant') ? Object.keys(EQUIPMENT_DEFS) : equipItemsForHero(heroKey);
     occ.equipment = occ.equipment || [];
     var html = '<h2>⚙️ ' + occ.name + ' Gear</h2>';
-    html += '<div class="ug-intro">Equip up to ' + EQUIP_SLOTS_MAX + ' items (' + occ.equipment.length + '/' + EQUIP_SLOTS_MAX + ' equipped). Tap an item to equip or unequip it.</div>';
+    var slotsMax = equipSlotsMax();
+    html += '<div class="ug-intro">Equip up to ' + slotsMax + ' items (' + occ.equipment.length + '/' + slotsMax + ' equipped). Tap an item to equip or unequip it.' +
+      (grandLvl('divineAscendant') ? ' Divine Ascendant lets this tower use any hero\'s gear.' : '') + '</div>';
     items.forEach(function(id) {
       var def = EQUIPMENT_DEFS[id];
       var equipped = hasEquip(occ, id);
-      html += '<div class="ug-row' + (equipped ? ' affordable' : '') + '" id="equip-' + id + '">' +
+      var crafted = !!state.craftedEquip[id];
+      html += '<div class="ug-row' + (equipped ? ' affordable' : crafted ? '' : ' locked') + '" id="equip-' + id + '">' +
         '<div class="ug-top"><span class="ug-name"><span class="ug-icon">' + def.icon + '</span>' + def.name + '</span>' +
-        '<span class="ug-level-tag">' + (equipped ? 'Equipped' : 'Empty') + '</span></div>' +
-        '<div class="ug-desc">' + def.desc + '</div></div>';
+        '<span class="ug-level-tag">' + (equipped ? 'Equipped' : crafted ? 'Empty' : '') + '</span></div>' +
+        '<div class="ug-desc">' + def.desc + '</div>' +
+        (crafted ? '' : '<div class="ug-footer locked-txt">🔒 Craft at the Armory</div>') + '</div>';
     });
     html += '<div class="combat-actions"><button class="btn" id="equip-done-btn">Done</button></div>';
     openModal(html);
     items.forEach(function(id) {
+      if (!state.craftedEquip[id]) return;
       document.getElementById('equip-' + id).addEventListener('click', function() {
         SFX.click();
         var idx = occ.equipment.indexOf(id);
         if (idx !== -1) {
           occ.equipment.splice(idx, 1);
         } else {
-          if (occ.equipment.length >= EQUIP_SLOTS_MAX) { showSaveToast('⚙️ All ' + EQUIP_SLOTS_MAX + ' gear slots full', true); return; }
+          if (occ.equipment.length >= equipSlotsMax()) { showSaveToast('⚙️ All ' + equipSlotsMax() + ' gear slots full', true); return; }
           occ.equipment.push(id);
         }
         save();
@@ -1229,7 +1291,7 @@
         }
         if (TOWER_HERO_CATEGORY[occTower.defId]) {
           var equippedCount = (occTower.equipment || []).length;
-          addMenuOption(menu, '⚙️ Gear (' + equippedCount + '/' + EQUIP_SLOTS_MAX + ')', true, 'equip', function() {
+          addMenuOption(menu, '⚙️ Gear (' + equippedCount + '/' + equipSlotsMax() + ')', true, 'equip', function() {
             closeSlotMenu();
             openEquipMenu(i);
           });
@@ -1247,6 +1309,7 @@
         addMenuOption(menu, 'Log Launcher 🪵', state.heroUnlocked && canAfford(TOWER_DEFS.logLauncher.cost), costLabel(TOWER_DEFS.logLauncher.cost), function() {
           pay(TOWER_DEFS.logLauncher.cost);
           slot.occupant = { kind: 'tower', defId: 'logLauncher', name: 'Log Launcher', icon: '🪵', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
       }
@@ -1254,6 +1317,7 @@
         addMenuOption(menu, 'Sap Pit 🌲', state.heroUnlocked && canAfford(TOWER_DEFS.sapPit.cost), costLabel(TOWER_DEFS.sapPit.cost), function() {
           pay(TOWER_DEFS.sapPit.cost);
           slot.occupant = { kind: 'tower', defId: 'sapPit', name: 'Sap Pit', icon: '🌲', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
       }
@@ -1261,6 +1325,7 @@
         addMenuOption(menu, 'Archer Tower 🏹', state.archerUnlocked && canAfford(TOWER_DEFS.archerTower.cost), costLabel(TOWER_DEFS.archerTower.cost), function() {
           pay(TOWER_DEFS.archerTower.cost);
           slot.occupant = { kind: 'tower', defId: 'archerTower', name: 'Archer Tower', icon: '🏹', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
       }
@@ -1268,6 +1333,7 @@
         addMenuOption(menu, 'Frost Spire ❄️', state.frostUnlocked && canAfford(TOWER_DEFS.frostSpire.cost), costLabel(TOWER_DEFS.frostSpire.cost), function() {
           pay(TOWER_DEFS.frostSpire.cost);
           slot.occupant = { kind: 'tower', defId: 'frostSpire', name: 'Frost Spire', icon: '❄️', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
       }
@@ -1275,6 +1341,7 @@
         addMenuOption(menu, 'Cannon Tower 🧨', state.dwarfUnlocked && canAfford(TOWER_DEFS.cannonTower.cost), costLabel(TOWER_DEFS.cannonTower.cost), function() {
           pay(TOWER_DEFS.cannonTower.cost);
           slot.occupant = { kind: 'tower', defId: 'cannonTower', name: 'Cannon Tower', icon: '🧨', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
       }
@@ -1282,6 +1349,7 @@
         addMenuOption(menu, 'Flamethrower 🔥', state.warlockUnlocked && canAfford(TOWER_DEFS.flamethrower.cost), costLabel(TOWER_DEFS.flamethrower.cost), function() {
           pay(TOWER_DEFS.flamethrower.cost);
           slot.occupant = { kind: 'tower', defId: 'flamethrower', name: 'Flamethrower', icon: '🔥', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
       }
@@ -1310,6 +1378,7 @@
           addMenuOption(menu, 'Scavenger Totem 💰', canAfford(TOWER_DEFS.scavengerTotem.cost), costLabel(TOWER_DEFS.scavengerTotem.cost), function() {
             pay(TOWER_DEFS.scavengerTotem.cost);
             slot.occupant = { kind: 'tower', defId: 'scavengerTotem', name: 'Scavenger Totem', icon: '💰', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
             renderSlot(i); closeSlotMenu(); renderResources(); save();
           });
         }
@@ -1317,6 +1386,7 @@
           addMenuOption(menu, 'Permafrost Trap 🧊', canAfford(TOWER_DEFS.permafrostTrap.cost), costLabel(TOWER_DEFS.permafrostTrap.cost), function() {
             pay(TOWER_DEFS.permafrostTrap.cost);
             slot.occupant = { kind: 'tower', defId: 'permafrostTrap', name: 'Permafrost Trap', icon: '🧊', lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+          maybeApplyPreservedItem(slot.occupant);
             renderSlot(i); closeSlotMenu(); renderResources(); save();
           });
         }
@@ -1363,6 +1433,48 @@
     if (cost.stone) parts.push(cost.stone + '🪨');
     return parts.join(' ');
   }
+  var STEWARD_PRIORITY = ['logLauncher', 'archerTower', 'frostSpire', 'cannonTower', 'flamethrower'];
+  function checkAutomation() {
+    if (grandLvl('chiefsSteward')) {
+      var activeTypes = STEWARD_PRIORITY.slice(0, grandLvl('chiefsSteward'));
+      for (var pi = 0; pi < activeTypes.length; pi++) {
+        var found = null, foundIdx = -1;
+        state.slots.forEach(function(s, si) {
+          if (found) return;
+          if (s.occupant && s.occupant.kind === 'tower' && s.occupant.defId === activeTypes[pi]) { found = s.occupant; foundIdx = si; }
+        });
+        if (found) {
+          var tLvl = found.towerLevel || 1;
+          var upCost = Math.ceil(15 * Math.pow(1.8, tLvl - 1) * ascensionCostMult());
+          if (state.gold >= upCost) {
+            state.gold -= upCost;
+            found.towerLevel = tLvl + 1;
+            renderResources(); renderSlot(foundIdx); save();
+          }
+          break;
+        }
+      }
+    }
+    if (grandLvl('layoutArchive') && state.savedLayout) {
+      var rebuildLimit = grandLvl('layoutArchive') * 3;
+      var placed = 0;
+      for (var li = 0; li < state.savedLayout.length && placed < rebuildLimit; li++) {
+        var bp = state.savedLayout[li];
+        var slot = state.slots[bp.idx];
+        if (!slot || slot.occupant) continue;
+        var def = TOWER_DEFS[bp.defId];
+        if (!def || !canAfford(def.cost)) continue;
+        pay(def.cost);
+        slot.occupant = { kind: 'tower', defId: bp.defId, name: def.name, icon: def.icon, lastAttack: 0, towerLevel: 1, targetMode: 'furthest', equipment: [] };
+        maybeApplyPreservedItem(slot.occupant);
+        renderSlot(bp.idx);
+        renderResources(); save();
+        placed++;
+      }
+    }
+  }
+  setInterval(checkAutomation, 4000);
+
   function canAfford(cost) {
     return (!cost.wood || state.wood >= cost.wood) && (!cost.iron || state.iron >= cost.iron) && (!cost.stone || state.stone >= cost.stone);
   }
@@ -1820,7 +1932,7 @@
     var demon = {
       id: 'd' + Math.random().toString(36).slice(2),
       pos: 100, hp: hpBase, maxHp: hpBase,
-      speed: (0.9 + Math.random() * 0.25 + state.wave * 0.04) * cfg.speedMult,
+      speed: (0.9 + Math.random() * 0.25 + state.wave * 0.04) * cfg.speedMult * earthShaperSpeedMult(),
       dmg: Math.round((11 + state.wave * 2) * cfg.dmgMult),
       goldMult: cfg.goldMult, type: type,
       flying: !!cfg.flying, armored: !!cfg.armored, summons: !!cfg.summons, lastSummonAt: simTimeMs,
@@ -1834,6 +1946,10 @@
     el.innerHTML = svgMarkup + '<div class="dhp"></div>';
     battlefield.appendChild(el);
     demonEls[demon.id] = el;
+    if (type === 'treasure') {
+      SFX.treasureSpawn();
+      showSaveToast('✨💰 A Treasure Demon has appeared!', false);
+    }
   }
 
   function spawnSummonedMinion(atPos) {
@@ -2131,7 +2247,7 @@
       state.waveEnemiesTotal = waveEnemyTotal(state.wave);
       state.waveEnemiesSpawned = 0;
       spawnInterval = Math.max(350, 4000 - state.wave * 180);
-      nextSpawnAllowedAt = now + WAVE_BREATHER_MS;
+      nextSpawnAllowedAt = now + (grandLvl('autoStoke') ? 0 : WAVE_BREATHER_MS);
       waveLabel.textContent = 'Wave ' + state.wave + ' · Best ' + state.stats.bestWave;
       if (state.wave % 5 === 0) {
         showWaveBanner(state.wave, true);
@@ -2149,27 +2265,45 @@
   }
 
   var EQUIPMENT_DEFS = {
-    serratedBarbs: { hero: 'gideon', icon: '🩸', name: 'Serrated Barbs', desc: 'Attacks apply Bleed — 5% of hit damage per second for 3s.' },
-    broadheadTips: { hero: 'gideon', icon: '🗡️', name: 'Broadhead Tips', desc: '+50% damage against Armored Brutes and Demon Lords.' },
-    weightedPommel: { hero: 'gideon', icon: '🔨', name: 'Weighted Pommel', desc: '10% chance on hit to knock the target back down the road.' },
-    heavyPayload: { hero: 'dwarf', icon: '💥', name: 'Heavy Payload', desc: "Attacks permanently shred an armored target's resistance (stacks, affects all damage against it)." },
-    volatileFuses: { hero: 'dwarf', icon: '🧨', name: 'Volatile Fuses', desc: '+30% splash radius, -10% attack speed.' },
-    shrapnelPack: { hero: 'dwarf', icon: '🔩', name: 'Shrapnel Pack', desc: 'Explosions fling shards at up to 3 demons further down the road.' },
-    lingeringAsh: { hero: 'warlock', icon: '💨', name: 'Lingering Ash', desc: 'Attacks leave a lingering slow on everything they burn.' },
-    spreadingWildfire: { hero: 'warlock', icon: '🔥', name: 'Spreading Wildfire', desc: 'Burning targets spread fire to nearby demons every 2 seconds.' },
-    soulMagnet: { hero: 'warlock', icon: '🩶', name: 'Soul Magnet', desc: 'Attacks drain a sliver of cooldown from every hero ability on hit.' },
-    huntersMark: { hero: 'archer', icon: '🎯', name: "Hunter's Mark", desc: 'Consecutive hits on the same target stack +10% damage, up to +100%.' },
-    piercingBroadheads: { hero: 'archer', icon: '➶', name: 'Piercing Broadheads', desc: 'Arrows pierce through to a second target for 50% damage.' },
-    wolfTrapFling: { hero: 'archer', icon: '🪤', name: 'Wolf Trap Fling', desc: 'Every 8s, roots every demon in range in place for 2 seconds.' },
-    chillingAura: { hero: 'frost', icon: '🌨️', name: 'Chilling Aura', desc: '+40% range and a much stronger, longer-lasting slow.' },
-    shatterFrost: { hero: 'frost', icon: '💎', name: 'Shatter-Frost Shards', desc: 'Demons that die while frosted explode, damaging nearby demons.' },
-    glacialWall: { hero: 'frost', icon: '🧊', name: 'Glacial Wall', desc: 'Periodically locks a Demon Lord in place completely for 5 seconds.' }
+    serratedBarbs: { hero: 'gideon', icon: '🩸', name: 'Serrated Barbs', desc: 'Attacks apply Bleed — 5% of hit damage per second for 3s.', cost: { wood: 60, iron: 20 } },
+    broadheadTips: { hero: 'gideon', icon: '🗡️', name: 'Broadhead Tips', desc: '+50% damage against Armored Brutes and Demon Lords.', cost: { wood: 80, iron: 30 } },
+    weightedPommel: { hero: 'gideon', icon: '🔨', name: 'Weighted Pommel', desc: '10% chance on hit to knock the target back down the road.', cost: { wood: 50, stone: 25 } },
+    heavyPayload: { hero: 'dwarf', icon: '💥', name: 'Heavy Payload', desc: "Attacks permanently shred an armored target's resistance (stacks, affects all damage against it).", cost: { iron: 90, stone: 40 } },
+    volatileFuses: { hero: 'dwarf', icon: '🧨', name: 'Volatile Fuses', desc: '+30% splash radius, -10% attack speed.', cost: { iron: 70, wood: 30 } },
+    shrapnelPack: { hero: 'dwarf', icon: '🔩', name: 'Shrapnel Pack', desc: 'Explosions fling shards at up to 3 demons further down the road.', cost: { iron: 100, stone: 50 } },
+    lingeringAsh: { hero: 'warlock', icon: '💨', name: 'Lingering Ash', desc: 'Attacks leave a lingering slow on everything they burn.', cost: { wood: 70, iron: 40 } },
+    spreadingWildfire: { hero: 'warlock', icon: '🔥', name: 'Spreading Wildfire', desc: 'Burning targets spread fire to nearby demons every 2 seconds.', cost: { wood: 90, iron: 60 } },
+    soulMagnet: { hero: 'warlock', icon: '🩶', name: 'Soul Magnet', desc: 'Attacks drain a sliver of cooldown from every hero ability on hit.', cost: { iron: 80, stone: 60 } },
+    huntersMark: { hero: 'archer', icon: '🎯', name: "Hunter's Mark", desc: 'Consecutive hits on the same target stack +10% damage, up to +100%.', cost: { wood: 65, iron: 35 } },
+    piercingBroadheads: { hero: 'archer', icon: '➶', name: 'Piercing Broadheads', desc: 'Arrows pierce through to a second target for 50% damage.', cost: { wood: 85, iron: 45 } },
+    wolfTrapFling: { hero: 'archer', icon: '🪤', name: 'Wolf Trap Fling', desc: 'Every 8s, roots every demon in range in place for 2 seconds.', cost: { wood: 60, stone: 55 } },
+    chillingAura: { hero: 'frost', icon: '🌨️', name: 'Chilling Aura', desc: '+40% range and a much stronger, longer-lasting slow.', cost: { iron: 60, stone: 45 } },
+    shatterFrost: { hero: 'frost', icon: '💎', name: 'Shatter-Frost Shards', desc: 'Demons that die while frosted explode, damaging nearby demons.', cost: { iron: 75, stone: 65 } },
+    glacialWall: { hero: 'frost', icon: '🧊', name: 'Glacial Wall', desc: 'Periodically locks a Demon Lord in place completely for 5 seconds.', cost: { iron: 110, stone: 80 } }
   };
-  var EQUIP_SLOTS_MAX = 3;
+  var EQUIP_SLOTS_BASE = 1;
+  var EQUIP_SLOTS_MAX_CAP = 4;
+  function equipSlotsMax() { return Math.min(EQUIP_SLOTS_MAX_CAP, EQUIP_SLOTS_BASE + prestigeLvl('geartech') + grandLvl('divineAscendant')); }
   function hasEquip(occ, id) { return !!(occ.equipment && occ.equipment.indexOf(id) !== -1); }
+  function maybeApplyPreservedItem(occ) {
+    if (!state.preservedItem || !occ || !TOWER_HERO_CATEGORY[occ.defId]) return;
+    if (state.preservedItem.hero !== TOWER_HERO_CATEGORY[occ.defId]) return;
+    if (!occ.equipment) occ.equipment = [];
+    if (occ.equipment.indexOf(state.preservedItem.item) === -1 && occ.equipment.length < equipSlotsMax()) {
+      occ.equipment.push(state.preservedItem.item);
+    }
+  }
   function towerPlaced(defId) { return state.slots.some(function(s) { return s.occupant && s.occupant.defId === defId; }); }
   function equipItemsForHero(heroKey) { return Object.keys(EQUIPMENT_DEFS).filter(function(id) { return EQUIPMENT_DEFS[id].hero === heroKey; }); }
   var TOWER_HERO_CATEGORY = { logLauncher: 'gideon', sapPit: 'gideon', cannonTower: 'dwarf', flamethrower: 'warlock', archerTower: 'archer', frostSpire: 'frost' };
+  var HERO_ABILITY_FIELD = { gideon: 'abilityReadyAt', archer: 'archerAbilityReadyAt', frost: 'frostAbilityReadyAt', dwarf: 'dwarfAbilityReadyAt', warlock: 'warlockAbilityReadyAt' };
+  function maybeCoreExpansion(occ, now) {
+    var chance = coreExpansionChance();
+    if (chance <= 0 || Math.random() >= chance) return;
+    var heroKey = TOWER_HERO_CATEGORY[occ.defId];
+    var field = heroKey && HERO_ABILITY_FIELD[heroKey];
+    if (field && state[field] > now) { state[field] = now; showSaveToast('⚡ Core Expansion!', false); }
+  }
 
   var TARGET_MODES = [
     { key: 'furthest', label: 'Farthest from Hearth', icon: '🚩' },
@@ -2226,15 +2360,16 @@
       }
     }
 
-    var atkMult = (now < state.abilityBuffUntil ? 1.6 : 1) * shardTierAtkMult() * (now < state.warcryUntil ? 2 : 1);
+    var atkMult = (now < state.abilityBuffUntil ? 1.6 : 1) * shardTierAtkMult() * (now < state.warcryUntil ? 2 : 1) * sovereignAtkMult();
 
     state.slots.forEach(function(slot, slotIdx) {
       var occ = slot.occupant;
       if (!occ || occ.kind !== 'tower') return;
       var def = TOWER_DEFS[occ.defId];
       var towerLvl = occ.towerLevel || 1;
-      var effRange = def.range * (1 + lvl('def_towerrange') * 0.03) * (1 + (towerLvl - 1) * 0.12);
-      var effDmg = (def.dmg + (occ.defId === 'logLauncher' ? lvl('def_towerdmg') * 3 : 0)) * (1 + (towerLvl - 1) * 0.25) * prestigeDmgMult();
+      var effRange = def.range * (1 + lvl('def_towerrange') * 0.03) * (1 + (towerLvl - 1) * 0.12) * sovereignRangeMult();
+      var effDmg = (def.dmg + (occ.defId === 'logLauncher' ? lvl('def_towerdmg') * 3 : 0)) * (1 + (towerLvl - 1) * 0.25) * prestigeDmgMult() * achievementDmgMult() * eternalFoundationsDmgMult() *
+        ((occ.defId === 'logLauncher' || occ.defId === 'archerTower') ? sovereignBarbarianMult() : 1);
       if (challenge && challenge.type === 'bloodCovenant' && (occ.defId === 'logLauncher' || occ.defId === 'archerTower')) {
         effRange = 999;
         effDmg *= 3;
@@ -2255,7 +2390,7 @@
           target.hp -= hitDmg * (target.armored ? 0.4 : 1);
           if (flashFreeze) {
             state.demons.forEach(function(o) {
-              if (Math.abs(o.pos - target.pos) <= 8) {
+              if (Math.abs(o.pos - target.pos) <= 8 + synergyRadiusBonus()) {
                 o.slowedUntil = Math.max(o.slowedUntil || 0, now + 1200);
                 o.slowMult = Math.min(o.slowMult === undefined ? 1 : o.slowMult, 0.3);
               }
@@ -2269,7 +2404,7 @@
           if (occ.defId === 'logLauncher' && hasEquip(occ, 'weightedPommel') && Math.random() < 0.10) {
             target.pos = Math.min(100, target.pos + 6);
           }
-          occ.lastAttack = now; flashTowerFire(slotEls[slotIdx]);
+          occ.lastAttack = now; maybeCoreExpansion(occ, now); flashTowerFire(slotEls[slotIdx]);
           if (occ.defId === 'logLauncher') { spawnLogProjectile(slot.percent, target.pos); SFX.towerFire(); }
           if (occ.defId === 'archerTower') {
             spawnArrowProjectile(slot.percent, target.pos); SFX.arrowFire();
@@ -2314,7 +2449,7 @@
             hitAny = true;
           }
         });
-        if (hitAny) { occ.lastAttack = now; flashTowerFire(slotEls[slotIdx]); SFX.frostCast(); }
+        if (hitAny) { occ.lastAttack = now; maybeCoreExpansion(occ, now); flashTowerFire(slotEls[slotIdx]); SFX.frostCast(); }
       } else if (def.type === 'burn') {
         if (now - occ.lastAttack < def.interval / atkMult) return;
         var hitAnyFire = false;
@@ -2334,7 +2469,7 @@
             if (frosted) {
               var steamDmg = 10 + Math.round(state.wave * 0.8);
               state.demons.forEach(function(o) {
-                if (Math.abs(o.pos - d.pos) <= 9) o.hp -= steamDmg; // true damage, ignores armor
+                if (Math.abs(o.pos - d.pos) <= 9 + synergyRadiusBonus()) o.hp -= steamDmg; // true damage, ignores armor
               });
               d.frostedUntil = 0; d.slowedUntil = 0;
               spawnDeathBurst(Math.max(0, d.pos), false);
@@ -2350,7 +2485,7 @@
             hitAnyFire = true;
           }
         });
-        if (hitAnyFire) { occ.lastAttack = now; flashTowerFire(slotEls[slotIdx]); SFX.cannonFire(); }
+        if (hitAnyFire) { occ.lastAttack = now; maybeCoreExpansion(occ, now); flashTowerFire(slotEls[slotIdx]); SFX.cannonFire(); }
       } else if (def.type === 'splash') {
         var volatile = hasEquip(occ, 'volatileFuses');
         if (now - occ.lastAttack < (def.interval * (volatile ? 1.1 : 1)) / atkMult) return;
@@ -2374,7 +2509,7 @@
           if (towerPlaced('cannonTower') && towerPlaced('flamethrower')) {
             scorchZones.push({ percent: slot.percent, until: now + 4000, dps: 3 + state.wave * 0.15 });
           }
-          occ.lastAttack = now; flashTowerFire(slotEls[slotIdx]);
+          occ.lastAttack = now; maybeCoreExpansion(occ, now); flashTowerFire(slotEls[slotIdx]);
           spawnCannonBlast(slot.percent, cTarget.pos);
           SFX.cannonFire();
         }
@@ -2406,7 +2541,7 @@
           showSaveToast('💰 Treasure Demon slain! +' + Math.round(pct * 1000) / 10 + '% of your resources', false);
           SFX.levelUp();
         } else {
-          state.gold += Math.round((2 + Math.floor(state.wave * 1.2)) * d.goldMult * prestigeResourceMult() * flawlessGoldMult());
+          state.gold += Math.round((2 + Math.floor(state.wave * 1.2)) * d.goldMult * prestigeResourceMult() * flawlessGoldMult() * achievementGoldMult() * sovereignGoldMult());
         }
         state.stats.totalKills++;
         state.discovered[d.type] = true;
@@ -2575,6 +2710,7 @@
       if (b === 'mine') openDeepMine();
       if (b === 'barracks') openWarBarracks();
       if (b === 'warroom') openWarRoom();
+      if (b === 'armory') openArmory();
     });
   });
 
@@ -3011,7 +3147,7 @@
     html += '<div class="ug-section-title">🦸 Heroes</div>';
     CODEX_HEROES.forEach(function(h) { html += codexRow(h.icon, h.name, h.desc); });
     html += '<div class="ug-section-title">⚙️ Equipment</div>';
-    html += '<div class="ug-intro">Equip up to 3 gear pieces on Log Launcher, Sap Pit, Cannon Tower, Flamethrower, Archer Tower, and Frost Spire via their menu.</div>';
+    html += '<div class="ug-intro">Craft gear at ⚒️ The Armory, then equip it on Log Launcher, Sap Pit, Cannon Tower, Flamethrower, Archer Tower, and Frost Spire via their menu.</div>';
     Object.keys(EQUIPMENT_DEFS).forEach(function(id) { var e = EQUIPMENT_DEFS[id]; html += codexRow(e.icon, e.name, e.desc); });
     html += '<div class="ug-section-title">🌀 Cross-Hero Synergies</div>';
     html += '<div class="ug-intro">Automatic bonuses that activate just from having the right towers on the field together — no gear required.</div>';
@@ -3079,8 +3215,26 @@
   var LIBRARY_TABS = [
     { key: 'howto', icon: '❓', label: 'How to Play' },
     { key: 'codex', icon: '📖', label: 'Codex' },
-    { key: 'research', icon: '📚', label: 'Research' }
+    { key: 'research', icon: '📚', label: 'Research' },
+    { key: 'achievements', icon: '🏆', label: 'Trophies' }
   ];
+
+  function achievementsBodyHtml() {
+    var unlockedCount = ACHIEVEMENTS.filter(function(a) { return state.achievements[a.id]; }).length;
+    var html = '<div class="ug-intro">' + unlockedCount + '/' + ACHIEVEMENTS.length + ' unlocked. Every trophy grants a small permanent boost that stacks forever, even through Prestige.</div>';
+    html += '<div class="ug-section-title">🏆 Permanent Bonuses</div>';
+    html += '<div class="blvl-card"><div class="blvl-desc">+' + Math.round(achievementBonusTotal('dmg') * 100) + '% tower damage &middot; +' +
+      Math.round(achievementBonusTotal('gold') * 100) + '% gold from kills &middot; +' + achievementBonusTotal('hearth') + ' max Hearth HP</div></div>';
+    html += '<div class="ug-section-title">Trophies</div>';
+    ACHIEVEMENTS.forEach(function(a) {
+      var done = !!state.achievements[a.id];
+      var bonusText = a.bonuses.map(function(b) {
+        return b.type === 'hearth' ? '+' + b.value + ' Hearth HP' : '+' + Math.round(b.value * 100) + '% ' + (b.type === 'dmg' ? 'damage' : 'gold');
+      }).join(', ');
+      html += codexRow(done ? a.icon : '🔒', done ? a.name : '???', done ? a.desc + ' Reward: ' + bonusText + '.' : 'Not yet unlocked.', done ? 'Unlocked' : '');
+    });
+    return html;
+  }
 
   function openLibrary(section) {
     section = section || 'research';
@@ -3092,6 +3246,7 @@
     html += '</div>';
     if (section === 'howto') html += howToBodyHtml();
     else if (section === 'codex') html += codexBodyHtml();
+    else if (section === 'achievements') html += achievementsBodyHtml();
     else html += researchBodyHtml();
 
     openModal(html);
@@ -3174,7 +3329,7 @@
     var resultEl = document.getElementById('if-result');
     var passDur = 3600;
     var sessionEnd = performance.now() + 8000;
-    var active = true, hits = 0, streak = 0, passStart = performance.now(), lastClick = 0;
+    var active = true, hits = 0, streak = 0, passStart = performance.now(), lastClick = 0, totalIron = 0;
     function colorFor(t) {
       if (t > zoneMax) return '#fff8e7';
       if (t >= zoneMin) return '#ff6b35';
@@ -3207,7 +3362,7 @@
     blade.addEventListener('click', function() {
       if (!active) return;
       var now = performance.now();
-      if (now - lastClick < 130) return;
+      if (now - lastClick < 60) return;
       lastClick = now;
       var elapsed = now - passStart;
       var temp = Math.max(0, 100 - (elapsed / passDur) * 100);
@@ -3216,6 +3371,7 @@
         streak++;
         var gain = Math.round(ironPerHit * (1 + Math.min(streak, 5) * 0.1));
         state.iron += gain;
+        totalIron += gain;
         renderResources();
         modalFloat(resultEl, 'PERFECT +' + gain, '#ffb627');
         SFX.perfectHit();
@@ -3223,13 +3379,14 @@
         streak = 0;
         var penalty = penaltyFor(temp);
         state.iron = Math.max(0, state.iron - penalty);
+        totalIron -= penalty;
         renderResources();
         modalFloat(resultEl, '-' + penalty, '#ff6b6b');
         SFX.miss();
       }
     });
     function finish() {
-      resultEl.innerHTML = '<b style="color:var(--gold);">Done!</b> ' + hits + ' perfect hits &middot; iron banked live';
+      resultEl.innerHTML = '<b style="color:var(--gold);">Done!</b> ' + Math.max(0, totalIron) + ' iron forged this trip (' + hits + ' perfect hits)';
       save();
     }
     requestAnimationFrame(frame);
@@ -3248,7 +3405,7 @@
     var tiles = [];
     for (var i = 0; i < 9; i++) {
       var t = document.createElement('div');
-      t.style.cssText = 'aspect-ratio:1/1;background:#20232e;border:1px solid #3d4052;border-radius:8px;position:relative;cursor:pointer;';
+      t.style.cssText = 'aspect-ratio:1/1;background:#20232e;border:1px solid #3d4052;border-radius:8px;position:relative;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;';
       grid.appendChild(t);
       tiles.push(t);
     }
@@ -3296,7 +3453,7 @@
     openModal(
       '<h2>🌲 Lumber Yard</h2>' +
       '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap when the needle hits green — streaks of 5 grant Heartwood</div>' +
-      '<div style="display:flex;justify-content:center;"><button id="ly-log" style="width:90px;height:90px;border-radius:50%;border:2px solid var(--wood);background:#5b4630;font-size:26px;cursor:pointer;">🪵</button></div>' +
+      '<div style="display:flex;justify-content:center;"><button id="ly-log" type="button" style="width:90px;height:90px;border-radius:50%;border:2px solid var(--wood);background:#5b4630;font-size:26px;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;">🪵</button></div>' +
       '<div style="max-width:260px;margin:16px auto 0;height:12px;border-radius:6px;background:#3c2f20;border:1px solid #5b4630;position:relative;">' +
         '<div id="ly-zone-marker" style="position:absolute;top:-3px;bottom:-3px;background:rgba(125,220,107,0.3);border-left:2px solid var(--green);border-right:2px solid var(--green);"></div>' +
         '<div id="ly-needle" style="position:absolute;top:-6px;width:4px;height:24px;background:#fff;left:50%;transform:translateX(-50%);"></div>' +
@@ -3337,7 +3494,7 @@
     document.getElementById('ly-log').addEventListener('click', function() {
       if (!active) return;
       var now = performance.now();
-      if (now - lastSwing < 180) return;
+      if (now - lastSwing < 60) return;
       lastSwing = now;
       var pos = 50 + 50 * Math.sin((now - start) / PERIOD * Math.PI * 2);
       if (Math.abs(pos - zoneCenter) <= zoneHalf) {
@@ -3696,19 +3853,42 @@
     state.hellPortalLevel = l.hellPortalLevel || 0;
     state.hellPortalBest = l.hellPortalBest || 0;
     if (l.ashenTrials) Object.keys(state.ashenTrials).forEach(function(k) { state.ashenTrials[k] = !!l.ashenTrials[k]; });
+    if (l.grandPrestige) {
+      state.grandPrestige.cores = l.grandPrestige.cores || 0;
+      state.grandPrestige.ritualCount = l.grandPrestige.ritualCount || 0;
+      if (l.grandPrestige.nodes) Object.keys(state.grandPrestige.nodes).forEach(function(k) { state.grandPrestige.nodes[k] = l.grandPrestige.nodes[k] || 0; });
+    }
+    state.preservedItem = l.preservedItem || null;
+    state.savedLayout = l.savedLayout || null;
+    state.sovereignChoice = l.sovereignChoice || null;
+    if (l.achievements) state.achievements = l.achievements;
     state.scavengerKills = l.scavengerKills || 0;
     state.noDamageStreak = l.noDamageStreak || 0;
     if (l.slots && l.slots.length === state.slots.length) {
       state.slots.forEach(function(slot, i) { slot.occupant = l.slots[i] ? l.slots[i].occupant : null; });
     }
+    state.craftedEquip = l.craftedEquip || {};
+    state.slots.forEach(function(slot) {
+      if (slot.occupant && slot.occupant.equipment) {
+        slot.occupant.equipment.forEach(function(id) { state.craftedEquip[id] = true; });
+      }
+    });
     if (l.lastSeenAt) {
-      var awaySec = Math.min(Math.max(0, (Date.now() - l.lastSeenAt) / 1000), 4 * 3600);
+      var capHours = grandLvl('infiniteAuto') ? 8 : 4;
+      var awaySec = Math.min(Math.max(0, (Date.now() - l.lastSeenAt) / 1000), capHours * 3600);
       if (awaySec > 30) {
         var r = passiveRates();
         var gw = Math.round(r.wood * awaySec), gi = Math.round(r.iron * awaySec), gs = Math.round(r.stone * awaySec);
         state.wood += gw; state.iron += gi; state.stone += gs;
+        var toastMsg = 'Welcome back! +' + gw + '🪵 +' + gi + '⛏️ +' + gs + '🪨';
+        if (grandLvl('infiniteAuto')) {
+          var goldPerSec = ((2 + state.wave * 1.2) / 4) * 0.85;
+          var gg = Math.round(goldPerSec * awaySec);
+          state.gold += gg;
+          toastMsg += ' +' + gg + '🪙';
+        }
         if (gw + gi + gs > 0) {
-          setTimeout(function() { showSaveToast('Welcome back! +' + gw + '🪵 +' + gi + '⛏️ +' + gs + '🪨', false); }, 600);
+          setTimeout(function() { showSaveToast(toastMsg, false); }, 600);
         }
       }
     }
@@ -3729,8 +3909,11 @@
       missionsCompleted: state.missionsCompleted,
       hellPortalLevel: state.hellPortalLevel, hellPortalBest: state.hellPortalBest,
       ashenTrials: state.ashenTrials,
+      achievements: state.achievements,
       scavengerKills: state.scavengerKills, noDamageStreak: state.noDamageStreak,
       prestige: state.prestige,
+      grandPrestige: state.grandPrestige, preservedItem: state.preservedItem,
+      savedLayout: state.savedLayout, sovereignChoice: state.sovereignChoice, craftedEquip: state.craftedEquip,
       wave: state.wave, hearthHp: state.hearthHp,
       slots: state.slots.map(function(s) { return { occupant: s.occupant }; })
     };
@@ -3758,11 +3941,118 @@
     { id: 'slayer', name: "Slayer's Wrath", desc: '+8% damage on every tower', baseCost: 4, costMult: 1.7 },
     { id: 'treasurelust', name: 'Treasure Lust', desc: '+1% resources earned from Treasure Demons per level, uncapped', baseCost: 5, costMult: 1.9 },
     { id: 'portalattune', name: 'Portal Attunement', desc: '+10% Ember Shards earned from Hell Portal missions per level, uncapped', baseCost: 4, costMult: 1.8 },
+    { id: 'geartech', name: 'Gear Tech', desc: '+1 equipment slot per tower (caps at 3 total)', baseCost: 8, costMult: 2.6, maxLevel: 2 },
     { id: 'ascension', name: 'Boundless Growth', desc: '-5% cost on every itemized and tower upgrade (up to 70%)', baseCost: 6, costMult: 2.2 },
     { id: 'sovereignty', name: 'Ashen Sovereignty', desc: '🌋 Ultimate: +2% resource gain AND +2% tower damage per level, uncapped', baseCost: 10, costMult: 2.4, requiresTier: 'inferno' }
   ];
   function ascensionBonus() { return prestigeLvl('ascension'); }
-  function ascensionCostMult() { return Math.max(0.3, 1 - ascensionBonus() * 0.05); }
+  function ascensionCostMult() { return Math.max(0.3, 1 - ascensionBonus() * 0.05) * sovereignUpgradeCostMult(); }
+
+  // ---------- Grand Prestige: The Great Ritual ----------
+  var GRAND_PRESTIGE_NODES = [
+    { id: 'autoStoke', branch: 'A', icon: '⏩', name: 'Auto-Stoke', desc: 'Unlocks a toggle to skip the breather and instantly start the next wave the moment the current one is wiped.', cost: 1, maxLevel: 1 },
+    { id: 'chiefsSteward', branch: 'A', icon: '🛎️', name: "Chief's Steward", desc: 'Auto-spends gold to upgrade your highest-level tower. Each level adds one more tower type to the priority list.', cost: 3, maxLevel: 5 },
+    { id: 'layoutArchive', branch: 'A', icon: '🗺️', name: 'The Layout Archive', desc: 'Save your tower layout. After a standard Ember Shard Prestige, it auto-rebuilds as gold allows. Each level auto-rebuilds more slots.', cost: 8, maxLevel: 3 },
+    { id: 'infiniteAuto', branch: 'A', icon: '♾️', name: 'Infinite Automation', desc: 'CAPSTONE. When you return after time away, catch up on up to 85% of the gold and Ember Shards you would have earned (capped at 8 hours).', cost: 25, maxLevel: 1, capstone: true },
+    { id: 'ancestralBlueprint', branch: 'H', icon: '📜', name: 'Ancestral Blueprint', desc: 'Choose one equipment item to permanently preserve — it auto-equips the instant its matching tower type is placed, through any reset.', cost: 2, maxLevel: 1 },
+    { id: 'primalSynergy', branch: 'H', icon: '🔗', name: 'Primal Synergy', desc: "+2 range to cross-hero synergy AoE effects (Flash Freeze's slow spread, Pyroclastic Steam's blast) per level.", cost: 5, maxLevel: 4 },
+    { id: 'coreExpansion', branch: 'H', icon: '⚡', name: 'Core Expansion', desc: '10% chance per level, on any tower hit, to instantly refresh that tower\'s hero ability cooldown.', cost: 12, maxLevel: 5 },
+    { id: 'divineAscendant', branch: 'H', icon: '👑', name: 'Divine Ascendant', desc: 'CAPSTONE. Every combat tower permanently gains a 4th equipment slot that can hold any item, regardless of hero.', cost: 30, maxLevel: 1, capstone: true },
+    { id: 'eternalFoundations', branch: 'S', icon: '🏛️', name: 'Eternal Foundations', desc: 'Demon Codex kill counts survive The Great Ritual and continuously scale your base damage (up to +20%).', cost: 1, maxLevel: 1 },
+    { id: 'earthShaper', branch: 'S', icon: '🛤️', name: 'Earth Shaper', desc: 'Grants a permanent Path Token per level — each slows every demon by 5%, giving your towers more uptime.', cost: 4, maxLevel: 3 },
+    { id: 'riftHarmonizer', branch: 'S', icon: '🌀', name: 'Rift Harmonizer', desc: '+25% Ember Shards earned from every standard Prestige, per level.', cost: 10, maxLevel: 5 },
+    { id: 'sovereignOverlord', branch: 'S', icon: '🎲', name: 'Sovereign Overlord', desc: 'CAPSTONE. Choose one Ashen Trial boon (balanced down) to run permanently on standard runs, no drawback.', cost: 25, maxLevel: 1, capstone: true }
+  ];
+  function grandLvl(id) { return state.grandPrestige.nodes[id] || 0; }
+  function grandMaxed(def) { return grandLvl(def.id) >= def.maxLevel; }
+  function grandCost(def) { return def.cost; } // flat cost per level, per design doc
+  function grandCoresForRitual() { return Math.max(1, Math.floor((state.prestige.totalShardsEarned || 0) / 250)); }
+
+  function eternalFoundationsDmgMult() {
+    if (!grandLvl('eternalFoundations')) return 1;
+    return 1 + Math.min(0.20, (state.stats.totalKills || 0) / 50000);
+  }
+  function earthShaperSpeedMult() { return Math.max(0.5, 1 - grandLvl('earthShaper') * 0.05); }
+  function synergyRadiusBonus() { return grandLvl('primalSynergy') * 2; }
+  function coreExpansionChance() { return grandLvl('coreExpansion') * 0.10; }
+  function riftHarmonizerMult() { return 1 + grandLvl('riftHarmonizer') * 0.25; }
+
+  var SOVEREIGN_BOONS = [
+    { key: 'eternalNight', name: 'Ember Surge', desc: '+15% tower attack speed, always active.' },
+    { key: 'goldless', name: "Scavenger's Eye", desc: '+15% gold from every kill, always active.' },
+    { key: 'chilledEarth', name: 'Frostbound Focus', desc: '+15% tower range, always active.' },
+    { key: 'bloodCovenant', name: "Barbarian's Zeal", desc: 'Log Launcher & Archer Tower deal +50% damage, always active.' },
+    { key: 'loneChieftain', name: "Chieftain's Discipline", desc: '-20% tower upgrade costs, always active.' }
+  ];
+  function sovereignAtkMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'eternalNight') ? 1.15 : 1; }
+  function sovereignGoldMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'goldless') ? 1.15 : 1; }
+  function sovereignRangeMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'chilledEarth') ? 1.15 : 1; }
+  function sovereignBarbarianMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'bloodCovenant') ? 1.5 : 1; }
+  function sovereignUpgradeCostMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'loneChieftain') ? 0.8 : 1; }
+
+  function buyGrandNode(def) {
+    if (grandMaxed(def)) return;
+    var cost = grandCost(def);
+    if (state.grandPrestige.cores < cost) return;
+    state.grandPrestige.cores -= cost;
+    state.grandPrestige.nodes[def.id]++;
+    SFX.levelUp();
+    renderResources(); save();
+  }
+
+  function performGreatRitual() {
+    var coresEarned = grandCoresForRitual();
+    state.grandPrestige.cores += coresEarned;
+    state.grandPrestige.ritualCount++;
+
+    if (!grandLvl('eternalFoundations')) {
+      state.stats = { bestWave: 1, totalKills: 0, bossesKilled: 0, gamesOver: 0 };
+      state.killsByType = {};
+    }
+
+    state.wood = 0; state.iron = 0; state.stone = 0; state.gold = 0;
+    state.grunts = 0; state.captains = 0;
+    state.heroUnlocked = false; state.archerUnlocked = false; state.frostUnlocked = false;
+    state.dwarfUnlocked = false; state.warlockUnlocked = false;
+    state.heroLevels = { gideon: 1, archer: 1, frost: 1, dwarf: 1, warlock: 1 };
+    state.heroTraining = { gideon: 0, archer: 0, frost: 0, dwarf: 0, warlock: 0 };
+    state.buildingLevels = { research: 1, lumber: 1, forge: 1, mine: 1, barracks: 1 };
+    state.buildingUpgrading = { research: 0, lumber: 0, forge: 0, mine: 0, barracks: 0 };
+    Object.keys(state.upgrades).forEach(function(k) { state.upgrades[k] = 0; });
+    state.upgradePending = {};
+    state.hpBonusMult = 1;
+    state.missionsCompleted = {};
+    state.hellPortalLevel = 0; state.hellPortalBest = 0;
+    state.ashenTrials = { eternalNight: false, goldless: false, chilledEarth: false, bloodCovenant: false, loneChieftain: false };
+    state.scavengerKills = 0; state.noDamageStreak = 0; state.tookDamageThisWave = false;
+    state.prestige.shards = 0; state.prestige.count = 0; state.prestige.tier = 0; state.prestige.totalShardsEarned = 0;
+    Object.keys(state.prestige.upgrades).forEach(function(k) { state.prestige.upgrades[k] = 0; });
+    state.savedLayout = null;
+    state.craftedEquip = {};
+
+    state.demons.forEach(function(d) { var el = demonEls[d.id]; if (el) el.remove(); });
+    state.demons = [];
+    state.slots.forEach(function(s) { s.occupant = null; });
+    renderAllSlots();
+    state.wave = 1;
+    state.waveEnemiesTotal = waveEnemyTotal(1); state.waveEnemiesSpawned = 0;
+    state.hearthMaxHp = 100 + achievementHearthBonus();
+    state.hearthHp = state.hearthMaxHp;
+    waveLabel.textContent = 'Wave 1 · Best ' + state.stats.bestWave;
+    hearthFill.style.width = '100%';
+    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = 4000; nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
+
+    document.body.classList.remove('tier-embers', 'tier-coals', 'tier-inferno');
+    applyShardTierVisuals();
+    renderResources(); renderHero(); renderBuildingBadges(); save();
+
+    var html = '<h2>🔥 The Great Ritual is Complete</h2>';
+    html += '<div class="ug-intro">The Hell Portal has been sealed. Your village is dust. From the ashes, you earned <b style="color:#a855f7;">' + coresEarned + ' Abyssal Cores 💠</b> — permanent, and never lost again.</div>';
+    html += '<div class="combat-actions"><button class="btn" id="ritual-done-btn">Begin Again</button></div>';
+    openModal(html);
+    document.getElementById('ritual-done-btn').addEventListener('click', function() { closeModal(); });
+  }
+
   var PRESTIGE_MIN_WAVE = 10;
   function prestigeLvl(id) { return state.prestige.upgrades[id] || 0; }
   function prestigeCost(def) { return Math.ceil(def.baseCost * Math.pow(def.costMult, prestigeLvl(def.id))); }
@@ -3772,6 +4062,54 @@
   function prestigeUnlockMult() { return Math.max(0.15, 1 - prestigeLvl('quickstart') * 0.08); }
   function prestigeDmgMult() { return 1 + prestigeLvl('slayer') * 0.08 + prestigeLvl('sovereignty') * 0.02; }
   function prestigeTreasureBonus() { return prestigeLvl('treasurelust') * 0.01; }
+
+  // ---------- Achievements & Trophies ----------
+  var ACHIEVEMENTS = [
+    { id: 'firstBlood', icon: '🗡️', name: 'First Blood', desc: 'Kill your first demon.', check: function() { return state.stats.totalKills >= 1; }, bonuses: [{ type: 'dmg', value: 0.01 }] },
+    { id: 'veteranSlayer', icon: '⚔️', name: 'Veteran Slayer', desc: 'Kill 500 demons.', check: function() { return state.stats.totalKills >= 500; }, bonuses: [{ type: 'dmg', value: 0.02 }] },
+    { id: 'legendarySlayer', icon: '💀', name: 'Legendary Slayer', desc: 'Kill 5,000 demons.', check: function() { return state.stats.totalKills >= 5000; }, bonuses: [{ type: 'dmg', value: 0.03 }] },
+    { id: 'waveTen', icon: '🌊', name: 'Getting Started', desc: 'Reach Wave 10.', check: function() { return state.stats.bestWave >= 10; }, bonuses: [{ type: 'hearth', value: 10 }] },
+    { id: 'waveFifty', icon: '🌊', name: 'Battle-Hardened', desc: 'Reach Wave 50.', check: function() { return state.stats.bestWave >= 50; }, bonuses: [{ type: 'hearth', value: 20 }] },
+    { id: 'waveHundred', icon: '🌊', name: 'Century Hold', desc: 'Reach Wave 100.', check: function() { return state.stats.bestWave >= 100; }, bonuses: [{ type: 'hearth', value: 30 }] },
+    { id: 'bossHunter', icon: '👑', name: 'Boss Hunter', desc: 'Slay 25 Demon Lords.', check: function() { return state.stats.bossesKilled >= 25; }, bonuses: [{ type: 'dmg', value: 0.02 }] },
+    { id: 'treasureFinder', icon: '💰', name: 'Treasure Finder', desc: 'Slay your first Treasure Demon.', check: function() { return (state.killsByType.treasure || 0) >= 1; }, bonuses: [{ type: 'gold', value: 0.05 }] },
+    { id: 'treasureHoarder', icon: '💰', name: 'Treasure Hoarder', desc: 'Slay 10 Treasure Demons.', check: function() { return (state.killsByType.treasure || 0) >= 10; }, bonuses: [{ type: 'gold', value: 0.10 }] },
+    { id: 'portalDiver', icon: '🌋', name: 'Portal Diver', desc: 'Reach Hell Portal Level 30.', check: function() { return (state.hellPortalBest || 0) >= 30; }, bonuses: [{ type: 'gold', value: 0.05 }] },
+    { id: 'fullRoster', icon: '🦸', name: 'Full Roster', desc: 'Hire all 5 heroes.', check: function() { return state.heroUnlocked && state.archerUnlocked && state.frostUnlocked && state.dwarfUnlocked && state.warlockUnlocked; }, bonuses: [{ type: 'hearth', value: 25 }] },
+    { id: 'prestigeVeteran', icon: '✨', name: 'Prestige Veteran', desc: 'Prestige 5 times.', check: function() { return (state.prestige.count || 0) >= 5; }, bonuses: [{ type: 'dmg', value: 0.03 }] },
+    { id: 'prestigeLegend', icon: '✨', name: 'Prestige Legend', desc: 'Prestige 20 times.', check: function() { return (state.prestige.count || 0) >= 20; }, bonuses: [{ type: 'dmg', value: 0.05 }] },
+    { id: 'trialMaster', icon: '🔥', name: 'Trial Master', desc: 'Complete all 5 Ashen Trials.', check: function() { return state.ashenTrials.eternalNight && state.ashenTrials.goldless && state.ashenTrials.chilledEarth && state.ashenTrials.bloodCovenant && state.ashenTrials.loneChieftain; }, bonuses: [{ type: 'dmg', value: 0.05 }, { type: 'gold', value: 0.05 }] }
+  ];
+  function achievementBonusTotal(type) {
+    var sum = 0;
+    ACHIEVEMENTS.forEach(function(a) {
+      if (!state.achievements[a.id]) return;
+      a.bonuses.forEach(function(b) { if (b.type === type) sum += b.value; });
+    });
+    return sum;
+  }
+  function achievementDmgMult() { return 1 + achievementBonusTotal('dmg'); }
+  function achievementGoldMult() { return 1 + achievementBonusTotal('gold'); }
+  function achievementHearthBonus() { return achievementBonusTotal('hearth'); }
+
+  function checkAchievements() {
+    var unlockedAny = false;
+    ACHIEVEMENTS.forEach(function(a) {
+      if (state.achievements[a.id]) return;
+      if (!a.check()) return;
+      state.achievements[a.id] = true;
+      unlockedAny = true;
+      a.bonuses.forEach(function(b) {
+        if (b.type === 'hearth') { state.hearthMaxHp += b.value; state.hearthHp += b.value; }
+      });
+      hearthFill.style.width = Math.max(0, (state.hearthHp / state.hearthMaxHp) * 100) + '%';
+      showSaveToast('🏆 Achievement: ' + a.name, false);
+      SFX.levelUp();
+    });
+    if (unlockedAny) { renderResources(); save(); }
+  }
+  setInterval(checkAchievements, 3000);
+
   function flawlessGoldMult() { return state.ashenTrials.bloodCovenant ? 1 + (state.noDamageStreak || 0) * 0.05 : 1; }
   function portalAttunementMult() { return 1 + prestigeLvl('portalattune') * 0.10; }
 
@@ -3832,7 +4170,7 @@
   ];
 
   function openWarRoom() {
-    var potential = Math.floor(state.wave / 3);
+    var potential = Math.round(Math.floor(state.wave / 3) * riftHarmonizerMult());
     var ready = state.wave >= PRESTIGE_MIN_WAVE;
     var tier = shardTier();
     var tierIdx = SHARD_TIERS.indexOf(tier);
@@ -3880,6 +4218,43 @@
           : !t.implemented ? '<div class="mdesc" style="margin-top:4px;opacity:0.6;">Coming Soon</div>' : '') + '</div></div>';
     });
 
+    html += '<div class="ug-section-title">🔱 The Great Ritual</div>';
+    html += '<div class="ug-intro">A hard reset beyond Prestige. It seals the Hell Portal and destroys your village entirely — resources, buildings, heroes, towers, Ember Shards, Prestige levels, and Ashen Trial unlocks all reset to day one. In exchange, you earn permanent <b style="color:#a855f7;">Abyssal Cores 💠</b>, spent below on a tree that survives every future reset, including future Rituals.</div>';
+    var ritualPreview = grandCoresForRitual();
+    html += '<div class="blvl-card"><div class="blvl-top"><span class="blvl-name">Abyssal Cores</span><span class="blvl-level" style="color:#a855f7;">' + state.grandPrestige.cores + ' 💠</span></div>' +
+      '<div class="blvl-desc">Performing the Ritual now would grant <b style="color:#a855f7;">' + ritualPreview + '</b> more Abyssal Cores.</div>' +
+      '<div class="blvl-btn" id="open-ritual-btn" style="background:linear-gradient(180deg,#7c2d12,#3a1206);border-color:#a855f7;">Perform The Great Ritual</div></div>';
+
+    var GRAND_BRANCHES = [
+      { key: 'A', title: '🔱 The Automation Engine' },
+      { key: 'H', title: '⚡ Hero Ascension & Overload' },
+      { key: 'S', title: '🏛️ Structural Infrastructure' }
+    ];
+    GRAND_BRANCHES.forEach(function(branch) {
+      html += '<div class="ug-section-title">' + branch.title + '</div>';
+      GRAND_PRESTIGE_NODES.filter(function(n) { return n.branch === branch.key; }).forEach(function(def) {
+        var lv = grandLvl(def.id);
+        var maxed = grandMaxed(def);
+        var afford = !maxed && state.grandPrestige.cores >= grandCost(def);
+        html += '<div class="ug-row' + (maxed ? ' maxed' : afford ? ' affordable' : '') + '" id="gp-' + def.id + '" style="' + (def.capstone ? 'border-color:#a855f7;' : '') + '">' +
+          '<div class="ug-top"><span class="ug-name">' + def.icon + ' ' + def.name + (def.capstone ? ' <span style="color:#a855f7;">★</span>' : '') + '</span><span class="ug-level-tag">Lv ' + lv + '/' + def.maxLevel + '</span></div>' +
+          '<div class="ug-desc">' + def.desc + '</div>' +
+          '<div class="ug-footer ' + (maxed ? 'maxed-txt' : 'cost') + '">' + (maxed ? 'MAXED' : grandCost(def) + '💠') + '</div></div>';
+        if (def.id === 'layoutArchive' && lv > 0) {
+          html += '<div class="blvl-card"><div class="blvl-btn" id="save-layout-btn">💾 Save Current Layout (' + (state.savedLayout ? 'saved' : 'none saved') + ')</div></div>';
+        }
+        if (def.id === 'ancestralBlueprint' && lv > 0) {
+          html += '<div class="blvl-card"><div class="blvl-desc">Preserved: ' + (state.preservedItem ? EQUIPMENT_DEFS[state.preservedItem.item].icon + ' ' + EQUIPMENT_DEFS[state.preservedItem.item].name : 'none chosen') + '</div>' +
+            '<div class="blvl-btn" id="choose-preserved-btn">Choose Item</div></div>';
+        }
+        if (def.id === 'sovereignOverlord' && lv > 0) {
+          var chosenBoon = SOVEREIGN_BOONS.find(function(b) { return b.key === state.sovereignChoice; });
+          html += '<div class="blvl-card"><div class="blvl-desc">Active Boon: ' + (chosenBoon ? chosenBoon.name + ' — ' + chosenBoon.desc : 'none chosen') + '</div>' +
+            '<div class="blvl-btn" id="choose-boon-btn">Choose Boon</div></div>';
+        }
+      });
+    });
+
     openModal(html);
     var pbtn = document.getElementById('do-prestige-btn');
     if (ready) pbtn.addEventListener('click', function() { doPrestige(); closeModal(); });
@@ -3904,6 +4279,88 @@
         else startWaveChallenge(t.key);
       });
     });
+
+    document.getElementById('open-ritual-btn').addEventListener('click', function() { SFX.click(); openRitualConfirm(); });
+    GRAND_PRESTIGE_NODES.forEach(function(def) {
+      if (grandMaxed(def)) return;
+      var row = document.getElementById('gp-' + def.id);
+      row.addEventListener('click', function() {
+        if (state.grandPrestige.cores < grandCost(def)) return;
+        buyGrandNode(def);
+        openWarRoom();
+      });
+    });
+    var saveLayoutBtn = document.getElementById('save-layout-btn');
+    if (saveLayoutBtn) saveLayoutBtn.addEventListener('click', function() {
+      SFX.click();
+      state.savedLayout = state.slots.map(function(s, idx) {
+        return s.occupant && s.occupant.kind === 'tower' ? { idx: idx, defId: s.occupant.defId, towerLevel: s.occupant.towerLevel || 1 } : null;
+      }).filter(function(x) { return x; });
+      save();
+      showSaveToast('💾 Layout saved (' + state.savedLayout.length + ' towers)', false);
+      openWarRoom();
+    });
+    var choosePreservedBtn = document.getElementById('choose-preserved-btn');
+    if (choosePreservedBtn) choosePreservedBtn.addEventListener('click', function() { openPreservedItemPicker(); });
+    var chooseBoonBtn = document.getElementById('choose-boon-btn');
+    if (chooseBoonBtn) chooseBoonBtn.addEventListener('click', function() { openSovereignPicker(); });
+  }
+
+  function openRitualConfirm() {
+    var coresPreview = grandCoresForRitual();
+    var html = '<h2>🔱 Seal The Hell Portal?</h2>';
+    html += '<div class="ug-intro" style="border-color:#a855f7;">This cannot be undone. Every resource, building, hero, tower, Ember Shard, Prestige upgrade, and Ashen Trial unlock will be destroyed. Your village returns to Day One.</div>';
+    html += '<div class="blvl-card"><div class="blvl-desc">You will earn <b style="color:#a855f7;">' + coresPreview + ' Abyssal Cores 💠</b>, permanent forever, spendable on the Grand Prestige tree.</div></div>';
+    if (!grandLvl('eternalFoundations')) html += '<div class="ug-intro">Your Codex kill counts will also be reset (Eternal Foundations gear this against future Rituals).</div>';
+    html += '<div class="combat-actions"><button class="btn" id="ritual-cancel-btn">Cancel</button><button class="btn" id="ritual-confirm-btn" style="background:linear-gradient(180deg,#7c2d12,#3a1206);border-color:#a855f7;">Perform The Ritual</button></div>';
+    openModal(html);
+    document.getElementById('ritual-cancel-btn').addEventListener('click', function() { openWarRoom(); });
+    document.getElementById('ritual-confirm-btn').addEventListener('click', function() { performGreatRitual(); });
+  }
+
+  function openPreservedItemPicker() {
+    var html = '<h2>📜 Ancestral Blueprint</h2>';
+    html += '<div class="ug-intro">Choose one item to preserve forever. It auto-equips the instant its matching tower is placed, through any reset — even The Great Ritual.</div>';
+    Object.keys(EQUIPMENT_DEFS).forEach(function(id) {
+      var e = EQUIPMENT_DEFS[id];
+      var picked = state.preservedItem && state.preservedItem.item === id;
+      html += '<div class="ug-row' + (picked ? ' affordable' : '') + '" id="preserve-' + id + '">' +
+        '<div class="ug-top"><span class="ug-name">' + e.icon + ' ' + e.name + '</span><span class="ug-level-tag">' + (picked ? 'Chosen' : '') + '</span></div>' +
+        '<div class="ug-desc">' + e.desc + '</div></div>';
+    });
+    html += '<div class="combat-actions"><button class="btn" id="preserve-back-btn">Back</button></div>';
+    openModal(html);
+    Object.keys(EQUIPMENT_DEFS).forEach(function(id) {
+      document.getElementById('preserve-' + id).addEventListener('click', function() {
+        SFX.click();
+        state.preservedItem = { hero: EQUIPMENT_DEFS[id].hero, item: id };
+        save();
+        openWarRoom();
+      });
+    });
+    document.getElementById('preserve-back-btn').addEventListener('click', function() { openWarRoom(); });
+  }
+
+  function openSovereignPicker() {
+    var html = '<h2>🎲 Sovereign Overlord</h2>';
+    html += '<div class="ug-intro">Choose one permanent boon to run on every standard game, forever. Changing your mind later simply swaps it — no cost.</div>';
+    SOVEREIGN_BOONS.forEach(function(b) {
+      var picked = state.sovereignChoice === b.key;
+      html += '<div class="ug-row' + (picked ? ' affordable' : '') + '" id="boon-' + b.key + '">' +
+        '<div class="ug-top"><span class="ug-name">' + b.name + '</span><span class="ug-level-tag">' + (picked ? 'Active' : '') + '</span></div>' +
+        '<div class="ug-desc">' + b.desc + '</div></div>';
+    });
+    html += '<div class="combat-actions"><button class="btn" id="boon-back-btn">Back</button></div>';
+    openModal(html);
+    SOVEREIGN_BOONS.forEach(function(b) {
+      document.getElementById('boon-' + b.key).addEventListener('click', function() {
+        SFX.click();
+        state.sovereignChoice = b.key;
+        save();
+        openWarRoom();
+      });
+    });
+    document.getElementById('boon-back-btn').addEventListener('click', function() { openWarRoom(); });
   }
 
   function openLoneChieftainPicker() {
@@ -3935,7 +4392,7 @@
 
   function doPrestige() {
     if (state.wave < PRESTIGE_MIN_WAVE) return;
-    var earned = Math.floor(state.wave / 3);
+    var earned = Math.round(Math.floor(state.wave / 3) * riftHarmonizerMult());
     state.prestige.shards += earned;
     state.prestige.totalShardsEarned += earned;
     state.prestige.count++;
@@ -3947,7 +4404,7 @@
     renderAllSlots();
     state.wave = 1;
     state.waveEnemiesTotal = waveEnemyTotal(1); state.waveEnemiesSpawned = 0;
-    state.hearthMaxHp = 100 + prestigeHearthBonus();
+    state.hearthMaxHp = 100 + prestigeHearthBonus() + achievementHearthBonus();
     state.hearthHp = state.hearthMaxHp;
     waveLabel.textContent = 'Wave 1 · Best ' + state.stats.bestWave;
     hearthFill.style.width = '100%';
