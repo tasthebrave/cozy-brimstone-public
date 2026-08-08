@@ -254,6 +254,10 @@
     background: var(--gold); color: var(--bg-void); font-size: 9px; font-weight: 700;
     display: flex; align-items: center; justify-content: center; box-shadow: 0 0 4px rgba(0,0,0,0.5);
   }
+  @keyframes repairLungeRight { 0%, 100% { transform: translate(-50%, -50%); } 45% { transform: translate(calc(-50% + 14px), -50%); } }
+  @keyframes repairLungeLeft { 0%, 100% { transform: translate(-50%, -50%); } 45% { transform: translate(calc(-50% - 14px), -50%); } }
+  .slot.repair-lunge-right { animation: repairLungeRight 0.6s ease-in-out; z-index: 5; }
+  .slot.repair-lunge-left { animation: repairLungeLeft 0.6s ease-in-out; z-index: 5; }
 
   .demon {
     position: absolute; top: 50%; width: 26px; height: 26px;
@@ -840,10 +844,10 @@
 
     { id: 'wb_window', building: 'barracks', label: 'War Barracks', name: 'Extended Reflexes', desc: '+120ms per input window', costRes: 'gold', baseCost: 20, costMult: 1.7 },
     { id: 'wb_shorter', building: 'barracks', label: 'War Barracks', name: 'Veteran Drill Sergeant', desc: '-1 starting chain length', costRes: 'gold', baseCost: 45, costMult: 2.2, maxLevel: 1 },
-    { id: 'wb_dmg', building: 'barracks', label: 'War Barracks', name: 'Weapon Drills', desc: '+1 attack for Grunts & Captains', costRes: 'gold', baseCost: 18, costMult: 1.65 },
+    { id: 'wb_dmg', building: 'barracks', label: 'War Barracks', name: 'Weapon Drills', desc: '+1 attack for each Barracks Tower trooper', costRes: 'gold', baseCost: 18, costMult: 1.65 },
 
     { id: 'def_hearth', building: 'defense', label: 'Battlefield', name: 'Hearth Reinforcement', desc: '+25 max Hearth HP', costRes: 'gold', baseCost: 25, costMult: 1.7 },
-    { id: 'def_blockerhp', building: 'defense', label: 'Battlefield', name: 'Grunt Conditioning', desc: '+10% Grunt/Captain HP', costRes: 'gold', baseCost: 22, costMult: 1.8 },
+    { id: 'def_blockerhp', building: 'defense', label: 'Battlefield', name: 'Grunt Conditioning', desc: '+10% Grunt/Captain/Barracks Tower HP', costRes: 'gold', baseCost: 22, costMult: 1.8 },
     { id: 'def_towerdmg', building: 'defense', label: 'Battlefield', name: 'Sharpened Logs', desc: '+3 Log Launcher damage', costRes: 'gold', baseCost: 30, costMult: 1.8 },
     { id: 'def_towerrange', building: 'defense', label: 'Battlefield', name: 'Longer Reach', desc: '+3% tower range', costRes: 'gold', baseCost: 28, costMult: 1.9 }
   ];
@@ -985,9 +989,10 @@
   // Grunts and Captains earned in the War Barracks are the game's living towers:
   // instead of dealing ranged damage they physically block the path.
   var BLOCKER_DEFS = {
-    grunt: { name: 'Grunt', icon: '🛡️', baseHp: 40, dmg: 1, capacity: 1 },
-    captain: { name: 'Captain', icon: '⚔️', baseHp: 70, dmg: 3, capacity: 3 }
+    grunt: { name: 'Grunt', icon: '🛡️', baseHp: 40, dmg: 0, capacity: 1, repairRate: 4 },
+    captain: { name: 'Captain', icon: '⚔️', baseHp: 70, dmg: 0, capacity: 3, repairRate: 8 }
   };
+  var BARRACKS_TOWER_DEF = { name: 'Barracks Tower', icon: '🏕️', baseHp: 60, dmg: 4, capacity: 2, cost: { wood: 70, iron: 20 }, garrisonMax: 3 };
 
   var demonEls = {};
   var battlefield = document.getElementById('battlefield');
@@ -1360,18 +1365,20 @@
           slot.occupant = { kind: 'blocker', defId: 'wall', name: 'Wall', icon: '🧱', hp: maxHp, maxHp: maxHp, dmg: 0, capacity: WALL_DEF.capacity, load: 0 };
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
+        addMenuOption(menu, 'Barracks Tower 🏕️', canAfford(BARRACKS_TOWER_DEF.cost), costLabel(BARRACKS_TOWER_DEF.cost), function() {
+          pay(BARRACKS_TOWER_DEF.cost);
+          var maxHp = Math.round(BARRACKS_TOWER_DEF.baseHp * state.hpBonusMult * (1 + lvl('def_blockerhp') * 0.10));
+          var dmg = BARRACKS_TOWER_DEF.dmg + lvl('wb_dmg');
+          var startingGarrison = Math.min(BARRACKS_TOWER_DEF.garrisonMax, state.captains);
+          state.captains -= startingGarrison;
+          slot.occupant = { kind: 'blocker', defId: 'barracksTower', name: 'Barracks Tower', icon: '🏕️', hp: maxHp, maxHp: maxHp, dmg: dmg, capacity: BARRACKS_TOWER_DEF.capacity, load: 0, garrison: startingGarrison };
+          renderSlot(i); closeSlotMenu(); renderResources(); save();
+        });
         addMenuOption(menu, 'Station Grunt 🛡️', state.grunts > 0, state.grunts + ' trained', function() {
           state.grunts--;
           var maxHp = Math.round(BLOCKER_DEFS.grunt.baseHp * state.hpBonusMult * (1 + lvl('def_blockerhp') * 0.10));
           var dmg = BLOCKER_DEFS.grunt.dmg + lvl('wb_dmg');
           slot.occupant = { kind: 'blocker', defId: 'grunt', name: 'Grunt', icon: '🛡️', hp: maxHp, maxHp: maxHp, dmg: dmg, capacity: BLOCKER_DEFS.grunt.capacity, load: 0 };
-          renderSlot(i); closeSlotMenu(); renderResources(); save();
-        });
-        addMenuOption(menu, 'Station Captain ⚔️', state.captains > 0, state.captains + ' trained', function() {
-          state.captains--;
-          var maxHp = Math.round(BLOCKER_DEFS.captain.baseHp * state.hpBonusMult * (1 + lvl('def_blockerhp') * 0.10));
-          var dmg = BLOCKER_DEFS.captain.dmg + lvl('wb_dmg');
-          slot.occupant = { kind: 'blocker', defId: 'captain', name: 'Captain', icon: '⚔️', hp: maxHp, maxHp: maxHp, dmg: dmg, capacity: BLOCKER_DEFS.captain.capacity, load: 0 };
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
         if (state.ashenTrials.goldless) {
@@ -2364,6 +2371,29 @@
 
     state.slots.forEach(function(slot, slotIdx) {
       var occ = slot.occupant;
+      if (occ && occ.kind === 'blocker' && occ.defId === 'grunt') {
+        var repairRate = BLOCKER_DEFS[occ.defId].repairRate;
+        if (now - (occ.lastRepairAt || 0) >= 1000) {
+          [slotIdx - 1, slotIdx + 1].forEach(function(ni) {
+            var neighbor = state.slots[ni];
+            if (!neighbor || !neighbor.occupant) return;
+            var no = neighbor.occupant;
+            if ((no.defId === 'wall' || no.defId === 'barracksTower') && no.hp < no.maxHp) {
+              no.hp = Math.min(no.maxHp, no.hp + repairRate);
+              occ.lastRepairAt = now;
+              renderSlot(ni);
+              var grEl = slotEls[slotIdx];
+              if (grEl) {
+                var lungeCls = ni > slotIdx ? 'repair-lunge-right' : 'repair-lunge-left';
+                grEl.classList.remove('repair-lunge-right', 'repair-lunge-left');
+                void grEl.offsetWidth;
+                grEl.classList.add(lungeCls);
+                setTimeout(function() { grEl.classList.remove(lungeCls); }, 600);
+              }
+            }
+          });
+        }
+      }
       if (!occ || occ.kind !== 'tower') return;
       var def = TOWER_DEFS[occ.defId];
       var towerLvl = occ.towerLevel || 1;
@@ -2608,15 +2638,24 @@
         }
         if (occ.hp <= 0) {
           var rebuiltDefId = occ.defId;
+          if (rebuiltDefId === 'barracksTower') {
+            var garrison = occ.garrison || 0;
+            if (garrison > 0 || state.captains > 0) {
+              if (garrison > 0) occ.garrison = garrison - 1; else state.captains--;
+              occ.hp = occ.maxHp;
+              spawnFloatAt(battlefield, '🪖 Next trooper!', '#8fd8ff');
+              renderResources(); renderSlot(state.slots.indexOf(slot));
+              continue;
+            }
+          }
           slot.occupant = null;
-          if (state.ashenTrials.eternalNight && (rebuiltDefId === 'grunt' || rebuiltDefId === 'captain')) {
-            var pool = rebuiltDefId === 'grunt' ? 'grunts' : 'captains';
-            if (state[pool] > 0) {
-              state[pool]--;
-              var bdef = BLOCKER_DEFS[rebuiltDefId];
+          if (state.ashenTrials.eternalNight && rebuiltDefId === 'grunt') {
+            if (state.grunts > 0) {
+              state.grunts--;
+              var bdef = BLOCKER_DEFS.grunt;
               var rMaxHp = Math.round(bdef.baseHp * state.hpBonusMult * (1 + lvl('def_blockerhp') * 0.10));
               var rDmg = bdef.dmg + lvl('wb_dmg');
-              slot.occupant = { kind: 'blocker', defId: rebuiltDefId, name: bdef.name, icon: bdef.icon, hp: rMaxHp, maxHp: rMaxHp, dmg: rDmg, capacity: bdef.capacity, load: 0 };
+              slot.occupant = { kind: 'blocker', defId: 'grunt', name: bdef.name, icon: bdef.icon, hp: rMaxHp, maxHp: rMaxHp, dmg: rDmg, capacity: bdef.capacity, load: 0 };
               renderResources();
               showSaveToast('🔧 Auto-Rebuild: ' + bdef.name + ' replaced', false);
             }
@@ -2747,9 +2786,10 @@
     { type: 'boss', icon: '👑', name: 'Demon Lord', desc: 'Appears every 5th wave. Enormous HP and damage — drops a Boss Trophy on death.' }
   ];
   var CODEX_TOWERS = [
-    { icon: '🛡️', name: 'Grunt', desc: 'Blocks 1 demon at a time. Base 1 attack.' },
-    { icon: '⚔️', name: 'Captain', desc: 'Blocks up to 3 demons at once. Base 3 attack.' },
+    { icon: '🛡️', name: 'Grunt', desc: 'Blocks 1 demon at a time, deals no damage. Repairs nearby Walls and Barracks Towers over time.' },
+    { icon: '⚔️', name: 'Captain', desc: 'Not stationed alone — fills a Barracks Tower\'s garrison, becoming its next trooper when the last one falls.' },
     { icon: '🧱', name: 'Wall', desc: 'High HP, deals no damage. Pure stalling, no training required.' },
+    { icon: '🏕️', name: 'Barracks Tower', desc: 'Fights back and blocks. When its trooper falls, the next one pours out from its garrison — consuming trained Captains to keep fighting.' },
     { icon: '🪵', name: 'Log Launcher', desc: "Gideon's tower. Heavy single-target damage, moderate range." },
     { icon: '🌲', name: 'Sap Pit', desc: "Gideon's tower. Slows demons in range, deals no damage." },
     { icon: '🏹', name: 'Archer Tower', desc: "Hazel's tower. Huge range and fire rate, lighter damage per hit." },
@@ -2862,6 +2902,15 @@
     { name: "Demon Lord's Chamber", desc: 'A lord of the abyss.', enemies: [{ name: 'Demon Lord', icon: '👑', hpBase: 160, atkBase: 14 }] }
   ];
 
+  var HELL_MAPS = [
+    { name: 'Ashen Threshold', icon: '🔥', bg: 'linear-gradient(180deg, #2b0f08 0%, #150705 100%)', accent: '#ff6b35' },
+    { name: 'The Bone Wastes', icon: '🦴', bg: 'linear-gradient(180deg, #2a2620 0%, #16140f 100%)', accent: '#d8c9a8' },
+    { name: 'Molten Caverns', icon: '🌋', bg: 'linear-gradient(180deg, #3a1206 0%, #1a0803 100%)', accent: '#ffb627' },
+    { name: 'The Void Rift', icon: '🌀', bg: 'linear-gradient(180deg, #1f0f2e 0%, #0d0616 100%)', accent: '#a855f7' },
+    { name: 'Obsidian Spire', icon: '🧊', bg: 'linear-gradient(180deg, #0c1a24 0%, #060c11 100%)', accent: '#7dc4ff' }
+  ];
+  function hellMapFor(level) { return HELL_MAPS[Math.floor(level / 10) % HELL_MAPS.length]; }
+
   function generateMission(level) {
     var template = MISSION_TEMPLATES[level % MISSION_TEMPLATES.length];
     var portalTier = Math.floor(level / MISSION_TEMPLATES.length) + 1;
@@ -2875,6 +2924,7 @@
       id: level + 1,
       level: level + 1,
       tier: portalTier,
+      map: hellMapFor(level + 1),
       name: template.name + (level > 0 ? ' (Tier ' + portalTier + ')' : ''),
       desc: template.desc,
       enemies: enemies,
@@ -2888,15 +2938,22 @@
 
   function renderWorldMap() {
     var currentLevel = (state.hellPortalLevel || 0);
-    var html = '<h2>🌋 Hell Portal</h2>';
-    html += '<div class="ug-intro">Send your hired heroes through the endless portal. Deeper layers bring greater challenges and greater rewards. Defeat costs nothing — your heroes always return.</div>';
+    var curMap = hellMapFor(currentLevel + 1);
+    var html = '<div style="margin:-16px -16px 14px;padding:14px 16px 10px;background:' + curMap.bg + ';border-bottom:2px solid ' + curMap.accent + ';border-radius:var(--radius-lg) var(--radius-lg) 0 0;">' +
+      '<div style="font-size:10px;letter-spacing:1px;color:' + curMap.accent + ';font-family:\'Cinzel\',serif;">' + curMap.icon + ' ' + curMap.name.toUpperCase() + '</div></div>';
+    html += '<h2>🌋 Hell Portal</h2>';
+    html += '<div class="ug-intro">Send your hired heroes through the endless portal. Deeper layers bring greater challenges and greater rewards — and new maps every 10 levels. Defeat costs nothing — your heroes always return.</div>';
     html += '<div class="ug-section-title">Current Progress: Level ' + (currentLevel + 1) + '</div>';
     
     for (var i = 0; i < 3; i++) {
       var level = currentLevel + i;
       var m = generateMission(level);
       var done = level < currentLevel;
-      html += '<div class="mission-node ' + (done ? 'done' : '') + '" id="mission-' + level + '">' +
+      var newMap = level % 10 === 0;
+      if (newMap) {
+        html += '<div class="ug-section-title" style="color:' + m.map.accent + ';">' + m.map.icon + ' ' + m.map.name + '</div>';
+      }
+      html += '<div class="mission-node ' + (done ? 'done' : '') + '" id="mission-' + level + '" style="border-left:2px solid ' + m.map.accent + ';">' +
         '<div class="mnum">' + (done ? '✓' : (level + 1)) + '</div>' +
         '<div class="minfo"><div class="mname">' + m.name + '</div><div class="mdesc">' +
         m.desc + ' · Reward: ' + m.reward.gold + '🪙 ' + m.reward.shards + '💠</div></div></div>';
@@ -2967,7 +3024,7 @@
     var enemies = mission.enemies.map(function(e, i) {
       return { id: i, name: e.name, icon: e.icon, hp: e.hp, maxHp: e.hp, atk: e.atk, stunned: false };
     });
-    hellBattle = { missionLevel: missionLevel, heroes: heroes, enemies: enemies, target: 0, log: ['A battle begins!'] };
+    hellBattle = { missionLevel: missionLevel, map: mission.map, heroes: heroes, enemies: enemies, target: 0, log: ['A battle begins!'] };
     renderCombat();
   }
 
@@ -2976,7 +3033,9 @@
     if (!b) return;
     var anyAlive = b.heroes.some(function(h) { return h.hp > 0; });
     var enemiesAlive = b.enemies.some(function(e) { return e.hp > 0; });
-    var html = '<h2>⚔️ Battle</h2><div class="combat-row">';
+    var html = '<div style="margin:-16px -16px 14px;padding:14px 16px 10px;background:' + b.map.bg + ';border-bottom:2px solid ' + b.map.accent + ';border-radius:var(--radius-lg) var(--radius-lg) 0 0;">' +
+      '<div style="font-size:10px;letter-spacing:1px;color:' + b.map.accent + ';font-family:\'Cinzel\',serif;">' + b.map.icon + ' ' + b.map.name.toUpperCase() + '</div></div>' +
+      '<h2>⚔️ Battle</h2><div class="combat-row">';
     b.enemies.forEach(function(e, i) {
       var dead = e.hp <= 0;
       html += '<div class="combatant' + (dead ? ' dead' : '') + (b.target === i && !dead ? ' target' : '') + '" data-enemy="' + i + '">' +
@@ -3522,7 +3581,7 @@
   function openWarBarracks() {
     openModal(
       '<h2>⚔️ War Barracks</h2>' +
-      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Swipe the box or use arrow keys — flawless chains train Captains, the strongest towers</div>' +
+      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Swipe the box or use arrow keys — flawless chains train Captains, your best repair crew and Barracks Tower fuel</div>' +
       '<div id="wb-seq" style="display:flex;justify-content:center;gap:6px;min-height:40px;"></div>' +
       '<div id="wb-zone" style="max-width:220px;height:90px;margin:12px auto 0;border:1px dashed var(--steel);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--steel);font-size:20px;touch-action:none;">⇅ ⇄</div>' +
       '<div id="wb-result" style="text-align:center;margin-top:8px;"></div>'
@@ -3615,7 +3674,7 @@
         clearTimeout(arrowTimeout);
         clearInterval(checkEnd);
         document.removeEventListener('keydown', keyHandler);
-        resultEl.innerHTML = '<b style="color:var(--gold);">Done!</b> ' + captains + ' captains, ' + grunts + ' grunts trained this trip — station them on the battlefield to defend the hearth';
+        resultEl.innerHTML = '<b style="color:var(--gold);">Done!</b> ' + captains + ' captains, ' + grunts + ' grunts trained this trip — station Grunts to repair, and Captains fill your Barracks Towers';
         save();
       }
     }, 200);
@@ -3630,7 +3689,7 @@
       target: function() { return document.getElementById('hell-portal'); } },
     { icon: '🌲', title: 'Gather Resources', body: 'Four buildings each run a quick tap-based minigame: the Lumber Yard makes Wood, the Iron Forge makes Iron, the Deep Mine makes Stone, and the War Barracks trains Grunts and Captains.',
       target: function() { return document.querySelector('.buildings-row'); } },
-    { icon: '🛡️', title: 'Build Your Defense', body: 'Tap any empty slot beside the road to station a Grunt, Captain, or Wall. Grunts and Captains block demons directly — Captains can hold off three at once.',
+    { icon: '🛡️', title: 'Build Your Defense', body: 'Tap any empty slot beside the road to station a Grunt, Wall, or Barracks Tower. Grunts block demons and repair nearby Walls and Barracks Towers. Trained Captains fill your Barracks Towers, fighting back and pouring out fresh troopers as the garrison lasts.',
       target: function() { return slotEls[0]; } },
     { icon: '🍺', title: 'Hire Heroes', body: 'Visit the Tavern to hire Gideon, Hazel Birchrunner, or Bramble Frostweaver. Each unlocks their own tower type and a powerful active ability — and can be trained there too.',
       target: function() { return document.querySelector('[data-b="tavern"]'); } },
