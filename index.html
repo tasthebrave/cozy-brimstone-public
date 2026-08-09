@@ -1187,10 +1187,11 @@
 
   var ARMORY_HERO_LABELS = { gideon: '🪓 Gideon', dwarf: '🧨 Durgan', warlock: '🔥 Ember', archer: '🏹 Hazel', frost: '❄️ Bramble' };
   function openArmory() {
-    var craftedCount = Object.keys(state.craftedEquip).filter(function(k) { return state.craftedEquip[k]; }).length;
+    var craftableIds = Object.keys(EQUIPMENT_DEFS).filter(function(id) { return !EQUIPMENT_DEFS[id].relic; });
+    var craftedCount = craftableIds.filter(function(id) { return state.craftedEquip[id]; }).length;
     var html = '<h2>⚒️ The Armory</h2>';
     html += '<div class="ug-intro">Craft equipment here before it can be equipped on a tower. Each piece is a one-time craft — once made, it\'s yours forever, on every tower of that hero.</div>';
-    html += '<div class="ug-intro">' + craftedCount + '/' + Object.keys(EQUIPMENT_DEFS).length + ' items crafted.</div>';
+    html += '<div class="ug-intro">' + craftedCount + '/' + craftableIds.length + ' items crafted.</div>';
     ['gideon', 'dwarf', 'warlock', 'archer', 'frost'].forEach(function(heroKey) {
       html += '<div class="ug-section-title">' + ARMORY_HERO_LABELS[heroKey] + '</div>';
       equipItemsForHero(heroKey).forEach(function(id) {
@@ -1203,8 +1204,17 @@
           (crafted ? '' : '<div class="ug-footer cost">' + costLabel(def.cost) + '</div>') + '</div>';
       });
     });
+    html += '<div class="ug-section-title">🌋 Portal Relics</div>';
+    html += '<div class="ug-intro">Relics can\'t be crafted — clear a Demon Lord\'s Chamber mission in the Hell Portal while that biome is active to claim its relic forever. Usable on any tower, any hero.</div>';
+    Object.keys(EQUIPMENT_DEFS).filter(function(id) { return EQUIPMENT_DEFS[id].relic; }).forEach(function(id) {
+      var def = EQUIPMENT_DEFS[id];
+      var owned = !!state.craftedEquip[id];
+      html += '<div class="ug-row" style="cursor:default;' + (owned ? '' : 'opacity:0.55;') + '">' +
+        '<div class="ug-top"><span class="ug-name">' + (owned ? def.icon : '🔒') + ' ' + (owned ? def.name : '???') + '</span><span class="ug-level-tag">' + (owned ? 'Claimed ✓' : '') + '</span></div>' +
+        '<div class="ug-desc">' + (owned ? def.desc : 'Not yet claimed.') + '</div></div>';
+    });
     openModal(html);
-    Object.keys(EQUIPMENT_DEFS).forEach(function(id) {
+    craftableIds.forEach(function(id) {
       if (state.craftedEquip[id]) return;
       var row = document.getElementById('craft-' + id);
       row.addEventListener('click', function() {
@@ -1225,6 +1235,9 @@
     if (!occ || !TOWER_HERO_CATEGORY[occ.defId]) return;
     var heroKey = TOWER_HERO_CATEGORY[occ.defId];
     var items = grandLvl('divineAscendant') ? Object.keys(EQUIPMENT_DEFS) : equipItemsForHero(heroKey);
+    items = items.filter(function(id) { return !EQUIPMENT_DEFS[id].relic || state.craftedEquip[id]; });
+    var ownedRelics = Object.keys(EQUIPMENT_DEFS).filter(function(id) { return EQUIPMENT_DEFS[id].relic && state.craftedEquip[id] && items.indexOf(id) === -1; });
+    items = items.concat(ownedRelics);
     occ.equipment = occ.equipment || [];
     var html = '<h2>⚙️ ' + occ.name + ' Gear</h2>';
     var slotsMax = equipSlotsMax();
@@ -2286,12 +2299,29 @@
     wolfTrapFling: { hero: 'archer', icon: '🪤', name: 'Wolf Trap Fling', desc: 'Every 8s, roots every demon in range in place for 2 seconds.', cost: { wood: 60, stone: 55 } },
     chillingAura: { hero: 'frost', icon: '🌨️', name: 'Chilling Aura', desc: '+40% range and a much stronger, longer-lasting slow.', cost: { iron: 60, stone: 45 } },
     shatterFrost: { hero: 'frost', icon: '💎', name: 'Shatter-Frost Shards', desc: 'Demons that die while frosted explode, damaging nearby demons.', cost: { iron: 75, stone: 65 } },
-    glacialWall: { hero: 'frost', icon: '🧊', name: 'Glacial Wall', desc: 'Periodically locks a Demon Lord in place completely for 5 seconds.', cost: { iron: 110, stone: 80 } }
+    glacialWall: { hero: 'frost', icon: '🧊', name: 'Glacial Wall', desc: 'Periodically locks a Demon Lord in place completely for 5 seconds.', cost: { iron: 110, stone: 80 } },
+    relicEmberCore: { hero: 'any', relic: true, mapKey: 'ashen', icon: '🔥', name: 'Ember Core', desc: 'Relic of the Ashen Threshold. +15% damage on the tower it\'s equipped to.' },
+    relicMarrowWard: { hero: 'any', relic: true, mapKey: 'bone', icon: '🦴', name: 'Marrow Ward', desc: 'Relic of the Bone Wastes. +25% range on the tower it\'s equipped to.' },
+    relicMagmaHeart: { hero: 'any', relic: true, mapKey: 'molten', icon: '🌋', name: 'Magma Heart', desc: "Relic of the Molten Caverns. Every hit also ignites the target, regardless of tower type." },
+    relicVoidShard: { hero: 'any', relic: true, mapKey: 'void', icon: '🌀', name: 'Void Shard', desc: 'Relic of the Void Rift. 15% chance on hit to deal double damage.' },
+    relicObsidianCore: { hero: 'any', relic: true, mapKey: 'obsidian', icon: '🧊', name: 'Obsidian Core', desc: 'Relic of the Obsidian Spire. 10% chance on hit to fully root the target for 1.5 seconds.' }
   };
   var EQUIP_SLOTS_BASE = 1;
   var EQUIP_SLOTS_MAX_CAP = 4;
   function equipSlotsMax() { return Math.min(EQUIP_SLOTS_MAX_CAP, EQUIP_SLOTS_BASE + prestigeLvl('geartech') + grandLvl('divineAscendant')); }
   function hasEquip(occ, id) { return !!(occ.equipment && occ.equipment.indexOf(id) !== -1); }
+  function applyRelicHit(occ, target, now) {
+    var mult = 1;
+    if (hasEquip(occ, 'relicVoidShard') && Math.random() < 0.15) mult = 2;
+    if (hasEquip(occ, 'relicMagmaHeart')) {
+      target.burnUntil = Math.max(target.burnUntil || 0, now + 2000);
+      target.burnDps = Math.max(target.burnDps || 0, 3 + state.wave * 0.15);
+    }
+    if (hasEquip(occ, 'relicObsidianCore') && Math.random() < 0.10) {
+      target.rootedUntil = now + 1500;
+    }
+    return mult;
+  }
   function maybeApplyPreservedItem(occ) {
     if (!state.preservedItem || !occ || !TOWER_HERO_CATEGORY[occ.defId]) return;
     if (state.preservedItem.hero !== TOWER_HERO_CATEGORY[occ.defId]) return;
@@ -2397,9 +2427,9 @@
       if (!occ || occ.kind !== 'tower') return;
       var def = TOWER_DEFS[occ.defId];
       var towerLvl = occ.towerLevel || 1;
-      var effRange = def.range * (1 + lvl('def_towerrange') * 0.03) * (1 + (towerLvl - 1) * 0.12) * sovereignRangeMult();
+      var effRange = def.range * (1 + lvl('def_towerrange') * 0.03) * (1 + (towerLvl - 1) * 0.12) * sovereignRangeMult() * (hasEquip(occ, 'relicMarrowWard') ? 1.25 : 1);
       var effDmg = (def.dmg + (occ.defId === 'logLauncher' ? lvl('def_towerdmg') * 3 : 0)) * (1 + (towerLvl - 1) * 0.25) * prestigeDmgMult() * achievementDmgMult() * eternalFoundationsDmgMult() *
-        ((occ.defId === 'logLauncher' || occ.defId === 'archerTower') ? sovereignBarbarianMult() : 1);
+        ((occ.defId === 'logLauncher' || occ.defId === 'archerTower') ? sovereignBarbarianMult() : 1) * (hasEquip(occ, 'relicEmberCore') ? 1.15 : 1);
       if (challenge && challenge.type === 'bloodCovenant' && (occ.defId === 'logLauncher' || occ.defId === 'archerTower')) {
         effRange = 999;
         effDmg *= 3;
@@ -2417,7 +2447,8 @@
           }
           var flashFreeze = occ.defId === 'archerTower' && towerPlaced('archerTower') && towerPlaced('frostSpire') && target.frostedUntil && now < target.frostedUntil;
           if (flashFreeze) hitDmg *= 3;
-          target.hp -= hitDmg * (target.armored ? 0.4 : 1);
+          var relicMult1 = applyRelicHit(occ, target, now);
+          target.hp -= hitDmg * relicMult1 * (target.armored ? 0.4 : 1);
           if (flashFreeze) {
             state.demons.forEach(function(o) {
               if (Math.abs(o.pos - target.pos) <= 8 + synergyRadiusBonus()) {
@@ -2463,7 +2494,8 @@
         var hitAny = false;
         state.demons.forEach(function(d) {
           if (Math.abs(slot.percent - d.pos) <= aoeRange) {
-            d.hp -= effDmg * (d.armored ? 0.4 : 1);
+            var relicMult2 = applyRelicHit(occ, d, now);
+            d.hp -= effDmg * relicMult2 * (d.armored ? 0.4 : 1);
             var slowDur = chilling ? 1400 : 700;
             var slowStrength = chilling ? 0.3 : 0.5;
             if (!(d.slowedUntil > now) || slowStrength <= (d.slowMult === undefined ? 1 : d.slowMult)) {
@@ -2488,7 +2520,8 @@
         state.demons.forEach(function(d) {
           if (Math.abs(slot.percent - d.pos) <= effRange) {
             var frosted = pyroclastic && d.frostedUntil && now < d.frostedUntil;
-            d.hp -= effDmg * (d.armored ? 0.4 : 1);
+            var relicMult3 = applyRelicHit(occ, d, now);
+            d.hp -= effDmg * relicMult3 * (d.armored ? 0.4 : 1);
             d.burnUntil = now + 2000;
             d.burnDps = Math.max(d.burnDps || 0, def.burnDps + lvl('def_towerdmg') * 0.3);
             if (hasEquip(occ, 'spreadingWildfire') && !d.burnSpreadNext) d.burnSpreadNext = now + 2000;
@@ -2527,7 +2560,7 @@
             cTarget.shredStacks = Math.min(5, (cTarget.shredStacks || 0) + 1);
             armorMult = Math.min(1, 0.4 + cTarget.shredStacks * 0.06);
           }
-          cTarget.hp -= effDmg * armorMult;
+          cTarget.hp -= effDmg * applyRelicHit(occ, cTarget, now) * armorMult;
           state.demons.forEach(function(d) {
             if (d !== cTarget && Math.abs(d.pos - cTarget.pos) <= splashRadius) d.hp -= (def.splashDmg || 0) * (d.armored ? 0.4 : 1);
           });
@@ -2903,16 +2936,17 @@
   ];
 
   var HELL_MAPS = [
-    { name: 'Ashen Threshold', icon: '🔥', bg: 'linear-gradient(180deg, #2b0f08 0%, #150705 100%)', accent: '#ff6b35' },
-    { name: 'The Bone Wastes', icon: '🦴', bg: 'linear-gradient(180deg, #2a2620 0%, #16140f 100%)', accent: '#d8c9a8' },
-    { name: 'Molten Caverns', icon: '🌋', bg: 'linear-gradient(180deg, #3a1206 0%, #1a0803 100%)', accent: '#ffb627' },
-    { name: 'The Void Rift', icon: '🌀', bg: 'linear-gradient(180deg, #1f0f2e 0%, #0d0616 100%)', accent: '#a855f7' },
-    { name: 'Obsidian Spire', icon: '🧊', bg: 'linear-gradient(180deg, #0c1a24 0%, #060c11 100%)', accent: '#7dc4ff' }
+    { key: 'ashen', name: 'Ashen Threshold', icon: '🔥', bg: 'linear-gradient(180deg, #2b0f08 0%, #150705 100%)', accent: '#ff6b35' },
+    { key: 'bone', name: 'The Bone Wastes', icon: '🦴', bg: 'linear-gradient(180deg, #2a2620 0%, #16140f 100%)', accent: '#d8c9a8' },
+    { key: 'molten', name: 'Molten Caverns', icon: '🌋', bg: 'linear-gradient(180deg, #3a1206 0%, #1a0803 100%)', accent: '#ffb627' },
+    { key: 'void', name: 'The Void Rift', icon: '🌀', bg: 'linear-gradient(180deg, #1f0f2e 0%, #0d0616 100%)', accent: '#a855f7' },
+    { key: 'obsidian', name: 'Obsidian Spire', icon: '🧊', bg: 'linear-gradient(180deg, #0c1a24 0%, #060c11 100%)', accent: '#7dc4ff' }
   ];
   function hellMapFor(level) { return HELL_MAPS[Math.floor(level / 10) % HELL_MAPS.length]; }
 
   function generateMission(level) {
-    var template = MISSION_TEMPLATES[level % MISSION_TEMPLATES.length];
+    var templateIdx = level % MISSION_TEMPLATES.length;
+    var template = MISSION_TEMPLATES[templateIdx];
     var portalTier = Math.floor(level / MISSION_TEMPLATES.length) + 1;
     var scaleMult = 1 + (portalTier - 1) * 0.25;
     var enemies = template.enemies.map(function(e, i) {
@@ -2924,6 +2958,7 @@
       id: level + 1,
       level: level + 1,
       tier: portalTier,
+      templateIdx: templateIdx,
       map: hellMapFor(level + 1),
       name: template.name + (level > 0 ? ' (Tier ' + portalTier + ')' : ''),
       desc: template.desc,
@@ -2942,7 +2977,7 @@
     var html = '<div style="margin:-16px -16px 14px;padding:14px 16px 10px;background:' + curMap.bg + ';border-bottom:2px solid ' + curMap.accent + ';border-radius:var(--radius-lg) var(--radius-lg) 0 0;">' +
       '<div style="font-size:10px;letter-spacing:1px;color:' + curMap.accent + ';font-family:\'Cinzel\',serif;">' + curMap.icon + ' ' + curMap.name.toUpperCase() + '</div></div>';
     html += '<h2>🌋 Hell Portal</h2>';
-    html += '<div class="ug-intro">Send your hired heroes through the endless portal. Deeper layers bring greater challenges and greater rewards — and new maps every 10 levels. Defeat costs nothing — your heroes always return.</div>';
+    html += '<div class="ug-intro">Send your hired heroes through the endless portal. Deeper layers bring greater challenges and greater rewards — new maps every 10 levels, and each biome\'s Demon Lord\'s Chamber holds a unique Relic the first time you clear it. Defeat costs nothing — your heroes always return.</div>';
     html += '<div class="ug-section-title">Current Progress: Level ' + (currentLevel + 1) + '</div>';
     
     for (var i = 0; i < 3; i++) {
@@ -3175,6 +3210,14 @@
         SFX.perfectHit();
       }
       state.hellPortalLevel = b.missionLevel + 1;
+      if (mission.templateIdx === MISSION_TEMPLATES.length - 1) {
+        var relicId = Object.keys(EQUIPMENT_DEFS).find(function(id) { return EQUIPMENT_DEFS[id].relic && EQUIPMENT_DEFS[id].mapKey === mission.map.key; });
+        if (relicId && !state.craftedEquip[relicId]) {
+          state.craftedEquip[relicId] = true;
+          var relicDef = EQUIPMENT_DEFS[relicId];
+          html += '<div class="blvl-card"><div class="blvl-desc">🌋 <b style="color:' + mission.map.accent + ';">Relic Claimed: ' + relicDef.icon + ' ' + relicDef.name + '</b><br>' + relicDef.desc + '</div></div>';
+        }
+      }
       renderResources(); save();
     } else {
       html += '<div class="ug-intro">Your party was overwhelmed and retreated through the portal. No harm done — try again anytime.</div>';
@@ -3683,25 +3726,33 @@
   // ---------- Save / Load ----------
   // ---------- Tutorial ----------
   var TUTORIAL_STEPS = [
-    { icon: '🏡', title: 'Defend the Hearth', body: 'Demons spill out of the Hell Portal here at the south pole and march up the icy road toward your Hearth. Keep it standing through wave after wave.',
+    { icon: '🏡', title: 'Defend the Hearth', body: 'Demons spill out of the Hell Portal here at the south pole and march up the icy road toward your Hearth. Keep it standing through wave after wave — losing all your Hearth HP ends the run.',
       target: function() { return document.querySelector('.hearth-wrap'); } },
-    { icon: '🌋', title: 'A Portal to Hell', body: 'That swirling portal leads into Hell itself. Send hired heroes through it to fight demons in turn-based missions for gold and glory.',
-      target: function() { return document.getElementById('hell-portal'); } },
-    { icon: '🌲', title: 'Gather Resources', body: 'Four buildings each run a quick tap-based minigame: the Lumber Yard makes Wood, the Iron Forge makes Iron, the Deep Mine makes Stone, and the War Barracks trains Grunts and Captains.',
+    { icon: '🌲', title: 'Gather Resources', body: 'Four buildings each run a quick tap-based minigame: the Lumber Yard makes Wood, the Iron Forge makes Iron, the Deep Mine makes Stone, and the War Barracks trains Grunts and Captains. Technique: perfect timing and streaks in each minigame scale your payout, so a few careful taps beat many rushed ones.',
       target: function() { return document.querySelector('.buildings-row'); } },
-    { icon: '🛡️', title: 'Build Your Defense', body: 'Tap any empty slot beside the road to station a Grunt, Wall, or Barracks Tower. Grunts block demons and repair nearby Walls and Barracks Towers. Trained Captains fill your Barracks Towers, fighting back and pouring out fresh troopers as the garrison lasts.',
+    { icon: '🛡️', title: 'Build Your Defense', body: 'Tap any empty slot beside the road to station a Grunt, Wall, or Barracks Tower — or build a damage tower once a hero unlocks it. Technique: don\'t fill every slot with blockers. Grunts and Walls deal no damage, so blocked demons will sit there forever unless a ranged tower is covering that lane too.',
       target: function() { return slotEls[0]; } },
-    { icon: '🍺', title: 'Hire Heroes', body: 'Visit the Tavern to hire Gideon, Hazel Birchrunner, or Bramble Frostweaver. Each unlocks their own tower type and a powerful active ability — and can be trained there too.',
+    { icon: '🎯', title: 'Targeting Priority', body: 'Tap a placed damage tower\'s "Targeting" option to cycle its focus: Farthest from Hearth (default), Nearest to Hearth, Highest Health, or Fastest. Technique: set your hardest hitter to Highest Health for Armored Brutes and bosses, and a fast tower to Fastest to shred Swarmer rushes before they reach the line.',
+      target: function() { return slotEls[0]; } },
+    { icon: '🏕️', title: 'Barracks Towers & Repair Crews', body: 'A Barracks Tower fights back and keeps pouring out fresh troopers from its garrison — feed it trained Captains to keep it stocked. Grunts no longer fight; instead, station one next to a Wall or Barracks Tower and it will passively repair it. Technique: pair every Barracks Tower with an adjacent Grunt so it never permanently falls.',
+      target: function() { return slotEls[0]; } },
+    { icon: '🍺', title: 'Hire Heroes', body: 'Visit the Tavern to hire Gideon Warmantle, Hazel Birchrunner, Bramble Frostweaver, Durgan Cragbrow, and Ember Cinderborn. Each unlocks their own tower type plus a powerful active ability on a cooldown. Technique: save an ability for boss waves (every 5th wave) rather than burning it on a normal wave — the payoff is much bigger.',
       target: function() { return document.querySelector('[data-b="tavern"]'); } },
-    { icon: '📚', title: 'The Library', body: 'Killing demons earns Gold. Spend it in the Library\'s Research tab to permanently upgrade your economy and defenses. The Library also holds the Codex and this guided tour, any time you need them.',
+    { icon: '⚙️', title: 'Craft Equipment', body: 'The Armory lets you craft gear for your combat towers — bleed, piercing shots, splash upgrades, stacking marks, and more. Each tower has 1 gear slot by default (up to 3 with the Gear Tech Prestige upgrade). Technique: craft gear that patches your weakest tower\'s gap — a slow, hard-hitting tower benefits most from Hunter\'s Mark or Broadhead Tips.',
+      target: function() { return document.querySelector('[data-b="armory"]'); } },
+    { icon: '📚', title: 'The Library', body: 'Killing demons earns Gold. Spend it in the Library\'s Research tab to permanently upgrade your economy and defenses. The Library also holds the Codex, a Trophies tab tracking permanent Achievement bonuses, and this guided tour, any time you need them.',
       target: function() { return document.querySelector('[data-b="library"]'); } },
-    { icon: '✨', title: 'Prestige for Power', body: 'Once you reach Wave 10, visit The Chieftain\'s War Room to reset your village — buildings, heroes, and wave — in exchange for permanent Ember Shards.',
+    { icon: '🌋', title: 'A Portal to Hell', body: 'That swirling portal leads into Hell itself. Send a party of up to 3 hired heroes through it for turn-based missions — gold, Ember Shards, and a new visual biome every 10 levels. Technique: clear the "Demon Lord\'s Chamber" mission the first time you reach each biome to permanently claim that biome\'s unique Relic — universal gear usable on any tower.',
+      target: function() { return document.getElementById('hell-portal'); } },
+    { icon: '✨', title: 'Prestige for Power', body: 'Once you reach Wave 10, visit The Chieftain\'s War Room to reset your village — buildings, heroes, towers, and wave — in exchange for permanent Ember Shards. Technique: the later you prestige, the more Shards you earn, but don\'t wait so long that your run stalls out — a faster prestige cycle often beats one giant run.',
       target: function() { return document.querySelector('[data-b="warroom"]'); } },
-    { icon: '💎', title: 'Spend Ember Shards', body: "Shards never disappear on reset. Spend them on permanent upgrades — extra damage, hearth health, faster starts, and more — so every new run starts stronger than the last.",
+    { icon: '💎', title: 'Spend Ember Shards', body: "Shards never disappear on reset. Spend them on permanent upgrades — extra damage, hearth health, faster starts, and more — so every new run starts stronger than the last. Hoarding thousands of Shards also visually transforms your village through Shard Tiers.",
       target: function() { return document.querySelector('[data-b="warroom"]'); } },
-    { icon: '🔥', title: 'Ashen Trials', body: "The War Room also holds Ashen Trials — one-off gauntlets that force a new playstyle. Beat one to permanently unlock an exclusive reward, with zero risk to your main village.",
+    { icon: '🔥', title: 'Ashen Trials', body: "The War Room also holds Ashen Trials — one-off gauntlets that force a new playstyle, unlocked in order by Prestige Tier. Beat one to permanently unlock an exclusive reward, with zero risk to your main village. Technique: tackle them roughly in unlock order — each one's reward often makes the next Trial easier.",
       target: function() { return document.querySelector('[data-b="warroom"]'); } },
-    { icon: '⏸', title: 'Take Your Time', body: "Use Pause, Play, and 2x Speed here to control the pace. Good luck — the Hearth is counting on you.",
+    { icon: '🔱', title: 'The Great Ritual', body: "For the truly committed: The Great Ritual is a much deeper reset than Prestige, found at the bottom of the War Room. It wipes everything, including your Ember Shard Prestige, in exchange for permanent Abyssal Cores spent on a 3-branch endgame tree. Technique: this is optional and irreversible — only perform it once your normal Prestige gains start to feel slow.",
+      target: function() { return document.querySelector('[data-b="warroom"]'); } },
+    { icon: '⏸', title: 'Take Your Time', body: "Use Pause, Play, and the speed toggle here to control the pace — it cycles 1x/2x by default, and unlocks a full 3x after beating the Inferno Torrent Ashen Trial. Good luck — the Hearth is counting on you.",
       target: function() { return document.querySelector('.speed-controls'); } }
   ];
   var tutStepIdx = 0;
