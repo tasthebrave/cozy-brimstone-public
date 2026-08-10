@@ -112,6 +112,36 @@
     transition: transform 0.05s;
   }
   .battlefield.shake { animation: bfShake 0.35s ease; }
+  .battlefield.map-ashen {
+    background:
+      radial-gradient(ellipse at 8% 50%, rgba(255,182,39,0.16), transparent 45%),
+      radial-gradient(ellipse at 95% 50%, rgba(120,20,50,0.35), transparent 55%),
+      linear-gradient(90deg, rgba(255,182,39,0.06), rgba(18,10,20,0.55) 55%, rgba(90,15,45,0.3));
+  }
+  .battlefield.map-bone {
+    background:
+      radial-gradient(ellipse at 8% 50%, rgba(216,201,168,0.14), transparent 45%),
+      radial-gradient(ellipse at 95% 50%, rgba(60,55,45,0.4), transparent 55%),
+      linear-gradient(90deg, rgba(216,201,168,0.08), rgba(20,18,14,0.6) 55%, rgba(42,38,32,0.35));
+  }
+  .battlefield.map-molten {
+    background:
+      radial-gradient(ellipse at 8% 50%, rgba(255,182,39,0.22), transparent 45%),
+      radial-gradient(ellipse at 95% 50%, rgba(180,40,10,0.45), transparent 55%),
+      linear-gradient(90deg, rgba(255,140,20,0.1), rgba(26,8,3,0.6) 55%, rgba(120,25,5,0.35));
+  }
+  .battlefield.map-void {
+    background:
+      radial-gradient(ellipse at 8% 50%, rgba(168,85,247,0.18), transparent 45%),
+      radial-gradient(ellipse at 95% 50%, rgba(60,15,90,0.45), transparent 55%),
+      linear-gradient(90deg, rgba(168,85,247,0.08), rgba(13,6,22,0.6) 55%, rgba(45,15,70,0.35));
+  }
+  .battlefield.map-obsidian {
+    background:
+      radial-gradient(ellipse at 8% 50%, rgba(125,196,255,0.16), transparent 45%),
+      radial-gradient(ellipse at 95% 50%, rgba(10,40,60,0.45), transparent 55%),
+      linear-gradient(90deg, rgba(125,196,255,0.07), rgba(6,12,17,0.6) 55%, rgba(15,45,60,0.3));
+  }
   @keyframes bfShake {
     0%, 100% { transform: translateX(0); }
     20% { transform: translateX(-6px) rotate(-0.3deg); }
@@ -234,7 +264,7 @@
   .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
   .icon-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(255,182,39,0.15); }
 
-  .slot-connector { position: absolute; width: 1px; border-left: 1px dashed rgba(138,141,153,0.3); pointer-events: none; }
+  .slot-connector { position: absolute; width: 1px; border-left: 1px dashed rgba(138,141,153,0.3); pointer-events: none; transition: top 0.6s ease; }
 
   .slot {
     position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -242,7 +272,7 @@
     background: var(--bg-panel); border: 1px dashed var(--steel);
     display: flex; align-items: center; justify-content: center;
     font-size: 17px; cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s, top 0.6s ease;
   }
   .slot:hover { border-color: var(--ash-dim); }
   .slot.filled { border-style: solid; border-color: var(--gold); box-shadow: 0 0 8px rgba(255,182,39,0.35); }
@@ -261,7 +291,7 @@
 
   .demon {
     position: absolute; top: 50%; width: 26px; height: 26px;
-    transform: translate(-50%, -50%); transition: left 0.14s linear;
+    transform: translate(-50%, -50%); transition: left 0.14s linear, top 0.14s linear;
     animation: demonBob 0.5s ease-in-out infinite;
     filter: drop-shadow(0 3px 3px rgba(0,0,0,0.5));
   }
@@ -1040,24 +1070,27 @@
 
   // ---------- Slots ----------
   var slotEls = [];
+  var slotConnectorEls = [];
   function buildSlots() {
     state.slots.forEach(function(slot, i) {
+      var co = curOffset(slot.percent);
       var connector = document.createElement('div');
       connector.className = 'slot-connector';
       connector.style.left = slot.percent + '%';
       if (slot.side < 0) {
-        connector.style.top = 'calc(50% + ' + slot.side + 'px)';
+        connector.style.top = 'calc(50% + ' + (slot.side + co) + 'px)';
         connector.style.height = Math.abs(slot.side) + 'px';
       } else {
-        connector.style.top = '50%';
+        connector.style.top = 'calc(50% + ' + co + 'px)';
         connector.style.height = slot.side + 'px';
       }
       battlefield.appendChild(connector);
+      slotConnectorEls.push(connector);
 
       var el = document.createElement('div');
       el.className = 'slot';
       el.style.left = slot.percent + '%';
-      el.style.top = 'calc(50% + ' + slot.side + 'px)';
+      el.style.top = 'calc(50% + ' + (slot.side + co) + 'px)';
       el.addEventListener('click', function() { openSlotMenu(i); });
       battlefield.appendChild(el);
       slotEls.push(el);
@@ -1171,6 +1204,12 @@
       lvlBadge.className = 'tower-lvl-badge';
       lvlBadge.textContent = occ.towerLevel;
       el.appendChild(lvlBadge);
+    }
+    if (occ.kind === 'blocker' && (occ.defId === 'wall' || occ.defId === 'barracksTower') && occ.blockerLevel > 1) {
+      var bLvlBadge = document.createElement('div');
+      bLvlBadge.className = 'tower-lvl-badge';
+      bLvlBadge.textContent = occ.blockerLevel;
+      el.appendChild(bLvlBadge);
     }
   }
   function renderAllSlots() { state.slots.forEach(function(s, i) { renderSlot(i); }); }
@@ -1315,6 +1354,22 @@
           });
         }
       }
+      if (slot.occupant.kind === 'blocker' && (slot.occupant.defId === 'wall' || slot.occupant.defId === 'barracksTower')) {
+        var occBlock = slot.occupant;
+        var bLvl = occBlock.blockerLevel || 1;
+        var bUpCost = Math.ceil((occBlock.defId === 'wall' ? 10 : 15) * Math.pow(1.75, bLvl - 1) * ascensionCostMult());
+        addMenuOption(menu, 'Upgrade (Lv ' + bLvl + ' → ' + (bLvl + 1) + ')', state.gold >= bUpCost, bUpCost + '🪙', function() {
+          if (state.gold < bUpCost) return;
+          state.gold -= bUpCost;
+          var hpGain = Math.round(occBlock.maxHp * 0.20);
+          occBlock.maxHp += hpGain;
+          occBlock.hp += hpGain;
+          if (occBlock.defId === 'barracksTower') occBlock.dmg += 1;
+          occBlock.blockerLevel = bLvl + 1;
+          renderResources(); renderSlot(i); closeSlotMenu(); save();
+          SFX.levelUp();
+        });
+      }
       var recall = document.createElement('div');
       recall.className = 'opt';
       recall.innerHTML = '<span>Recall (no refund)</span>';
@@ -1375,7 +1430,7 @@
         addMenuOption(menu, 'Build Wall 🧱', canAfford(WALL_DEF.cost), costLabel(WALL_DEF.cost), function() {
           pay(WALL_DEF.cost);
           var maxHp = Math.round(WALL_DEF.baseHp * state.hpBonusMult * (1 + lvl('def_blockerhp') * 0.10));
-          slot.occupant = { kind: 'blocker', defId: 'wall', name: 'Wall', icon: '🧱', hp: maxHp, maxHp: maxHp, dmg: 0, capacity: WALL_DEF.capacity, load: 0 };
+          slot.occupant = { kind: 'blocker', defId: 'wall', name: 'Wall', icon: '🧱', hp: maxHp, maxHp: maxHp, dmg: 0, capacity: WALL_DEF.capacity, load: 0, blockerLevel: 1 };
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
         addMenuOption(menu, 'Barracks Tower 🏕️', canAfford(BARRACKS_TOWER_DEF.cost), costLabel(BARRACKS_TOWER_DEF.cost), function() {
@@ -1384,7 +1439,7 @@
           var dmg = BARRACKS_TOWER_DEF.dmg + lvl('wb_dmg');
           var startingGarrison = Math.min(BARRACKS_TOWER_DEF.garrisonMax, state.captains);
           state.captains -= startingGarrison;
-          slot.occupant = { kind: 'blocker', defId: 'barracksTower', name: 'Barracks Tower', icon: '🏕️', hp: maxHp, maxHp: maxHp, dmg: dmg, capacity: BARRACKS_TOWER_DEF.capacity, load: 0, garrison: startingGarrison };
+          slot.occupant = { kind: 'blocker', defId: 'barracksTower', name: 'Barracks Tower', icon: '🏕️', hp: maxHp, maxHp: maxHp, dmg: dmg, capacity: BARRACKS_TOWER_DEF.capacity, load: 0, garrison: startingGarrison, blockerLevel: 1 };
           renderSlot(i); closeSlotMenu(); renderResources(); save();
         });
         addMenuOption(menu, 'Station Grunt 🛡️', state.grunts > 0, state.grunts + ' trained', function() {
@@ -1807,12 +1862,15 @@
     var el = document.createElement('div');
     el.className = 'cannonball-projectile';
     el.style.left = fromPercent + '%';
+    var fromOff = curOffset(fromPercent), toOff = curOffset(toPercent);
     battlefield.appendChild(el);
     var start = performance.now();
     var dur = 260;
     function step(ts) {
       var t = Math.min(1, (ts - start) / dur);
       el.style.left = (fromPercent + (toPercent - fromPercent) * t) + '%';
+      var curveTop = fromOff + (toOff - fromOff) * t;
+      el.style.top = 'calc(50% + ' + curveTop + 'px)';
       el.style.marginTop = (-Math.sin(t * Math.PI) * 10) + 'px';
       if (t < 1) requestAnimationFrame(step);
       else { el.remove(); spawnExplosion(toPercent); }
@@ -1824,12 +1882,14 @@
     var el = document.createElement('div');
     el.className = 'arrow-projectile';
     el.style.left = fromPercent + '%';
+    var fromOff = curOffset(fromPercent), toOff = curOffset(toPercent);
     battlefield.appendChild(el);
     var start = performance.now();
     var dur = 180;
     function step(ts) {
       var t = Math.min(1, (ts - start) / dur);
       el.style.left = (fromPercent + (toPercent - fromPercent) * t) + '%';
+      el.style.top = 'calc(50% + ' + (fromOff + (toOff - fromOff) * t) + 'px)';
       if (t < 1) requestAnimationFrame(step);
       else el.remove();
     }
@@ -1841,12 +1901,15 @@
     el.className = 'log-projectile';
     el.textContent = '🪵';
     el.style.left = fromPercent + '%';
+    var fromOff = curOffset(fromPercent), toOff = curOffset(toPercent);
     battlefield.appendChild(el);
     var start = performance.now();
     var dur = 450;
     function step(ts) {
       var t = Math.min(1, (ts - start) / dur);
       el.style.left = (fromPercent + (toPercent - fromPercent) * t) + '%';
+      var curveTop = fromOff + (toOff - fromOff) * t;
+      el.style.top = 'calc(50% + ' + curveTop + 'px)';
       el.style.marginTop = (-Math.sin(t * Math.PI) * 16) + 'px';
       if (t < 1) requestAnimationFrame(step);
       else el.remove();
@@ -1948,7 +2011,7 @@
   function spawnDemon(forceType) {
     var type = forceType || (Math.random() < TREASURE_DEMON_CHANCE ? 'treasure' : rollDemonType());
     var cfg = DEMON_TYPES[type];
-    var hpBase = Math.max(1, Math.round(state.wave * 1.7 * cfg.hpMult));
+    var hpBase = Math.max(1, Math.round(state.wave * 1.7 * (1 + state.wave / 40) * cfg.hpMult));
     var demon = {
       id: 'd' + Math.random().toString(36).slice(2),
       pos: 100, hp: hpBase, maxHp: hpBase,
@@ -1962,6 +2025,7 @@
     var el = document.createElement('div');
     el.className = 'demon' + (cfg.cls ? ' ' + cfg.cls : '');
     el.style.left = '100%';
+    el.style.top = 'calc(50% + ' + curOffset(100) + 'px)';
     var svgMarkup = cfg.svg === 'boss' ? BOSS_SVG : cfg.svg === 'flier' ? FLIER_SVG : cfg.svg === 'armored' ? ARMORED_SVG : DEMON_SVG;
     el.innerHTML = svgMarkup + '<div class="dhp"></div>';
     battlefield.appendChild(el);
@@ -1973,7 +2037,7 @@
   }
 
   function spawnSummonedMinion(atPos) {
-    var hpBase = Math.max(1, Math.round(state.wave * 1.7 * 0.35));
+    var hpBase = Math.max(1, Math.round(state.wave * 1.7 * (1 + state.wave / 40) * 0.35));
     var demon = {
       id: 'd' + Math.random().toString(36).slice(2),
       pos: atPos, hp: hpBase, maxHp: hpBase,
@@ -1987,6 +2051,7 @@
     var el = document.createElement('div');
     el.className = 'demon';
     el.style.left = atPos + '%';
+    el.style.top = 'calc(50% + ' + curOffset(atPos) + 'px)';
     el.innerHTML = DEMON_SVG + '<div class="dhp"></div>';
     battlefield.appendChild(el);
     demonEls[demon.id] = el;
@@ -2025,6 +2090,7 @@
     var el = document.createElement('div');
     el.className = 'demon' + (cfg.cls ? ' ' + cfg.cls : '');
     el.style.left = Math.max(0, d.pos) + '%';
+    el.style.top = 'calc(50% + ' + curOffset(Math.max(0, d.pos)) + 'px)';
     var svgMarkup = cfg.svg === 'boss' ? BOSS_SVG : cfg.svg === 'flier' ? FLIER_SVG : cfg.svg === 'armored' ? ARMORED_SVG : DEMON_SVG;
     el.innerHTML = svgMarkup + '<div class="dhp"></div>';
     battlefield.appendChild(el);
@@ -2216,6 +2282,7 @@
       challenge.wavesCleared++;
       if (challenge.wavesCleared >= challenge.wavesTarget) { endWaveChallenge(true); return; }
       state.wave++;
+      applyBattlefieldMap();
       lastWaveAt = now;
       state.waveEnemiesTotal = waveEnemyTotal(state.wave);
       state.waveEnemiesSpawned = 0;
@@ -2262,6 +2329,7 @@
       }
       state.tookDamageThisWave = false;
       state.wave++;
+      applyBattlefieldMap();
       if (state.wave > state.stats.bestWave) state.stats.bestWave = state.wave;
       lastWaveAt = now;
       state.waveEnemiesTotal = waveEnemyTotal(state.wave);
@@ -2616,6 +2684,8 @@
             if (state.scavengerKills >= 15) {
               state.scavengerKills = 0;
               state.prestige.shards++;
+              state.prestige.totalShardsEarned = (state.prestige.totalShardsEarned || 0) + 1;
+              applyShardTierVisuals();
               showSaveToast('💰 Scavenger Totem: +1 Ember Shard', false);
             }
           }
@@ -2703,6 +2773,7 @@
       var el = demonEls[d.id];
       if (el) {
         el.style.left = Math.max(0, d.pos) + '%';
+        el.style.top = 'calc(50% + ' + curOffset(Math.max(0, d.pos)) + 'px)';
         var hpBar = el.querySelector('.dhp');
         if (hpBar) hpBar.style.width = Math.max(0, (d.hp / d.maxHp) * 100) + '%';
       }
@@ -2736,6 +2807,7 @@
     state.slots.forEach(function(s) { s.occupant = null; });
     renderAllSlots();
     state.wave = 1; state.hearthHp = state.hearthMaxHp;
+    applyBattlefieldMap();
     state.waveEnemiesTotal = waveEnemyTotal(1); state.waveEnemiesSpawned = 0;
     waveLabel.textContent = 'Wave 1 · Best ' + state.stats.bestWave;
     hearthFill.style.width = '100%';
@@ -2821,8 +2893,8 @@
   var CODEX_TOWERS = [
     { icon: '🛡️', name: 'Grunt', desc: 'Blocks 1 demon at a time, deals no damage. Repairs nearby Walls and Barracks Towers over time.' },
     { icon: '⚔️', name: 'Captain', desc: 'Not stationed alone — fills a Barracks Tower\'s garrison, becoming its next trooper when the last one falls.' },
-    { icon: '🧱', name: 'Wall', desc: 'High HP, deals no damage. Pure stalling, no training required.' },
-    { icon: '🏕️', name: 'Barracks Tower', desc: 'Fights back and blocks. When its trooper falls, the next one pours out from its garrison — consuming trained Captains to keep fighting.' },
+    { icon: '🧱', name: 'Wall', desc: 'High HP, deals no damage. Pure stalling, no training required. Upgradeable with gold for more HP.' },
+    { icon: '🏕️', name: 'Barracks Tower', desc: 'Fights back and blocks. When its trooper falls, the next one pours out from its garrison — consuming trained Captains to keep fighting. Upgradeable with gold for more HP and damage.' },
     { icon: '🪵', name: 'Log Launcher', desc: "Gideon's tower. Heavy single-target damage, moderate range." },
     { icon: '🌲', name: 'Sap Pit', desc: "Gideon's tower. Slows demons in range, deals no damage." },
     { icon: '🏹', name: 'Archer Tower', desc: "Hazel's tower. Huge range and fire rate, lighter damage per hit." },
@@ -2943,6 +3015,46 @@
     { key: 'obsidian', name: 'Obsidian Spire', icon: '🧊', bg: 'linear-gradient(180deg, #0c1a24 0%, #060c11 100%)', accent: '#7dc4ff' }
   ];
   function hellMapFor(level) { return HELL_MAPS[Math.floor(level / 10) % HELL_MAPS.length]; }
+  function battlefieldMapFor(wave) { return HELL_MAPS[Math.floor((wave - 1) / 10) % HELL_MAPS.length]; }
+  function pathCurveOffset(mapKey, percent) {
+    var p = Math.max(0, Math.min(100, percent));
+    if (mapKey === 'bone') return (Math.floor(p / 16.6) % 2 === 0) ? 22 : -22;
+    if (mapKey === 'molten') return Math.sin((p / 100) * Math.PI * 2) * 26;
+    if (mapKey === 'void') return Math.sin((p / 100) * Math.PI * 4) * 18;
+    if (mapKey === 'obsidian') return (((p % 20) / 20) * 2 - 1) * 24;
+    return 0; // ashen: straight line
+  }
+  function curOffset(percent) { return pathCurveOffset(lastBattlefieldMapKey || 'ashen', percent); }
+  var lastBattlefieldMapKey = null;
+  function applyBattlefieldMap() {
+    var m = battlefieldMapFor(state.wave);
+    if (m.key === lastBattlefieldMapKey) return;
+    lastBattlefieldMapKey = m.key;
+    battlefield.classList.remove('map-ashen', 'map-bone', 'map-molten', 'map-void', 'map-obsidian');
+    battlefield.classList.add('map-' + m.key);
+    repositionForCurve();
+  }
+  function repositionForCurve() {
+    state.slots.forEach(function(slot, i) {
+      var el = slotEls[i];
+      if (el) el.style.top = 'calc(50% + ' + (slot.side + curOffset(slot.percent)) + 'px)';
+      var conn = slotConnectorEls[i];
+      if (conn) {
+        var co = curOffset(slot.percent);
+        if (slot.side < 0) {
+          conn.style.top = 'calc(50% + ' + (slot.side + co) + 'px)';
+          conn.style.height = Math.abs(slot.side) + 'px';
+        } else {
+          conn.style.top = 'calc(50% + ' + co + 'px)';
+          conn.style.height = slot.side + 'px';
+        }
+      }
+    });
+    state.demons.forEach(function(d) {
+      var el = demonEls[d.id];
+      if (el) el.style.top = 'calc(50% + ' + curOffset(Math.max(0, d.pos)) + 'px)';
+    });
+  }
 
   function generateMission(level) {
     var templateIdx = level % MISSION_TEMPLATES.length;
@@ -4002,6 +4114,19 @@
         }
       }
     }
+    if (l.challenge) {
+      challenge = {
+        type: l.challenge.type,
+        wavesCleared: l.challenge.wavesCleared,
+        wavesTarget: l.challenge.wavesTarget,
+        chosenTower: l.challenge.chosenTower,
+        snapshot: l.challenge.snapshot
+      };
+      if (l.challenge.elapsedMs !== undefined) challenge.startedAt = simTimeMs - l.challenge.elapsedMs;
+      if (l.challenge.remainingMs !== undefined) challenge.endsAt = simTimeMs + l.challenge.remainingMs;
+    } else {
+      challenge = null;
+    }
   }
 
   function buildSaveData() {
@@ -4025,7 +4150,16 @@
       grandPrestige: state.grandPrestige, preservedItem: state.preservedItem,
       savedLayout: state.savedLayout, sovereignChoice: state.sovereignChoice, craftedEquip: state.craftedEquip,
       wave: state.wave, hearthHp: state.hearthHp,
-      slots: state.slots.map(function(s) { return { occupant: s.occupant }; })
+      slots: state.slots.map(function(s) { return { occupant: s.occupant }; }),
+      challenge: challenge ? {
+        type: challenge.type,
+        wavesCleared: challenge.wavesCleared,
+        wavesTarget: challenge.wavesTarget,
+        chosenTower: challenge.chosenTower,
+        snapshot: challenge.snapshot,
+        elapsedMs: challenge.startedAt !== undefined ? Math.max(0, simTimeMs - challenge.startedAt) : undefined,
+        remainingMs: challenge.endsAt !== undefined ? Math.max(0, challenge.endsAt - simTimeMs) : undefined
+      } : null
     };
   }
 
@@ -4076,7 +4210,13 @@
   function grandLvl(id) { return state.grandPrestige.nodes[id] || 0; }
   function grandMaxed(def) { return grandLvl(def.id) >= def.maxLevel; }
   function grandCost(def) { return def.cost; } // flat cost per level, per design doc
-  function grandCoresForRitual() { return Math.max(1, Math.floor((state.prestige.totalShardsEarned || 0) / 250)); }
+  function grandCoresForRitual() {
+    var shardCores = Math.floor((state.prestige.totalShardsEarned || 0) / 250);
+    var trialsDone = Object.keys(state.ashenTrials).filter(function(k) { return state.ashenTrials[k]; }).length;
+    var trialCores = trialsDone * 3;
+    var portalCores = Math.floor((state.hellPortalBest || 0) / 5);
+    return Math.max(1, shardCores + trialCores + portalCores);
+  }
 
   function eternalFoundationsDmgMult() {
     if (!grandLvl('eternalFoundations')) return 1;
@@ -4145,6 +4285,7 @@
     state.slots.forEach(function(s) { s.occupant = null; });
     renderAllSlots();
     state.wave = 1;
+    applyBattlefieldMap();
     state.waveEnemiesTotal = waveEnemyTotal(1); state.waveEnemiesSpawned = 0;
     state.hearthMaxHp = 100 + achievementHearthBonus();
     state.hearthHp = state.hearthMaxHp;
@@ -4157,7 +4298,7 @@
     renderResources(); renderHero(); renderBuildingBadges(); save();
 
     var html = '<h2>🔥 The Great Ritual is Complete</h2>';
-    html += '<div class="ug-intro">The Hell Portal has been sealed. Your village is dust. From the ashes, you earned <b style="color:#a855f7;">' + coresEarned + ' Abyssal Cores 💠</b> — permanent, and never lost again.</div>';
+    html += '<div class="ug-intro">The Hell Portal has been sealed. Your village is dust. From the ashes, you earned <b style="color:#a855f7;">' + coresEarned + ' Abyssal Cores 🔮</b> — permanent, and never lost again.</div>';
     html += '<div class="combat-actions"><button class="btn" id="ritual-done-btn">Begin Again</button></div>';
     openModal(html);
     document.getElementById('ritual-done-btn').addEventListener('click', function() { closeModal(); });
@@ -4329,10 +4470,14 @@
     });
 
     html += '<div class="ug-section-title">🔱 The Great Ritual</div>';
-    html += '<div class="ug-intro">A hard reset beyond Prestige. It seals the Hell Portal and destroys your village entirely — resources, buildings, heroes, towers, Ember Shards, Prestige levels, and Ashen Trial unlocks all reset to day one. In exchange, you earn permanent <b style="color:#a855f7;">Abyssal Cores 💠</b>, spent below on a tree that survives every future reset, including future Rituals.</div>';
+    html += '<div class="ug-intro">A hard reset beyond Prestige. It seals the Hell Portal and destroys your village entirely — resources, buildings, heroes, towers, Ember Shards, Prestige levels, and Ashen Trial unlocks all reset to day one. In exchange, you earn permanent <b style="color:#a855f7;">Abyssal Cores 🔮</b>, spent below on a tree that survives every future reset, including future Rituals.</div>';
     var ritualPreview = grandCoresForRitual();
-    html += '<div class="blvl-card"><div class="blvl-top"><span class="blvl-name">Abyssal Cores</span><span class="blvl-level" style="color:#a855f7;">' + state.grandPrestige.cores + ' 💠</span></div>' +
-      '<div class="blvl-desc">Performing the Ritual now would grant <b style="color:#a855f7;">' + ritualPreview + '</b> more Abyssal Cores.</div>' +
+    var trialsDoneCount = Object.keys(state.ashenTrials).filter(function(k) { return state.ashenTrials[k]; }).length;
+    html += '<div class="blvl-card"><div class="blvl-top"><span class="blvl-name">Abyssal Cores</span><span class="blvl-level" style="color:#a855f7;">' + state.grandPrestige.cores + ' 🔮</span></div>' +
+      '<div class="blvl-desc">Performing the Ritual now would grant <b style="color:#a855f7;">' + ritualPreview + '</b> more Abyssal Cores — ' +
+      Math.floor((state.prestige.totalShardsEarned || 0) / 250) + ' from lifetime Ember Shards, ' +
+      (trialsDoneCount * 3) + ' from ' + trialsDoneCount + '/5 Ashen Trials completed, and ' +
+      Math.floor((state.hellPortalBest || 0) / 5) + ' from reaching Hell Portal Level ' + (state.hellPortalBest || 0) + '.</div>' +
       '<div class="blvl-btn" id="open-ritual-btn" style="background:linear-gradient(180deg,#7c2d12,#3a1206);border-color:#a855f7;">Perform The Great Ritual</div></div>';
 
     var GRAND_BRANCHES = [
@@ -4349,7 +4494,7 @@
         html += '<div class="ug-row' + (maxed ? ' maxed' : afford ? ' affordable' : '') + '" id="gp-' + def.id + '" style="' + (def.capstone ? 'border-color:#a855f7;' : '') + '">' +
           '<div class="ug-top"><span class="ug-name">' + def.icon + ' ' + def.name + (def.capstone ? ' <span style="color:#a855f7;">★</span>' : '') + '</span><span class="ug-level-tag">Lv ' + lv + '/' + def.maxLevel + '</span></div>' +
           '<div class="ug-desc">' + def.desc + '</div>' +
-          '<div class="ug-footer ' + (maxed ? 'maxed-txt' : 'cost') + '">' + (maxed ? 'MAXED' : grandCost(def) + '💠') + '</div></div>';
+          '<div class="ug-footer ' + (maxed ? 'maxed-txt' : 'cost') + '">' + (maxed ? 'MAXED' : grandCost(def) + '🔮') + '</div></div>';
         if (def.id === 'layoutArchive' && lv > 0) {
           html += '<div class="blvl-card"><div class="blvl-btn" id="save-layout-btn">💾 Save Current Layout (' + (state.savedLayout ? 'saved' : 'none saved') + ')</div></div>';
         }
@@ -4420,7 +4565,7 @@
     var coresPreview = grandCoresForRitual();
     var html = '<h2>🔱 Seal The Hell Portal?</h2>';
     html += '<div class="ug-intro" style="border-color:#a855f7;">This cannot be undone. Every resource, building, hero, tower, Ember Shard, Prestige upgrade, and Ashen Trial unlock will be destroyed. Your village returns to Day One.</div>';
-    html += '<div class="blvl-card"><div class="blvl-desc">You will earn <b style="color:#a855f7;">' + coresPreview + ' Abyssal Cores 💠</b>, permanent forever, spendable on the Grand Prestige tree.</div></div>';
+    html += '<div class="blvl-card"><div class="blvl-desc">You will earn <b style="color:#a855f7;">' + coresPreview + ' Abyssal Cores 🔮</b>, permanent forever, spendable on the Grand Prestige tree.</div></div>';
     if (!grandLvl('eternalFoundations')) html += '<div class="ug-intro">Your Codex kill counts will also be reset (Eternal Foundations gear this against future Rituals).</div>';
     html += '<div class="combat-actions"><button class="btn" id="ritual-cancel-btn">Cancel</button><button class="btn" id="ritual-confirm-btn" style="background:linear-gradient(180deg,#7c2d12,#3a1206);border-color:#a855f7;">Perform The Ritual</button></div>';
     openModal(html);
@@ -4513,6 +4658,7 @@
     state.slots.forEach(function(s) { s.occupant = null; });
     renderAllSlots();
     state.wave = 1;
+    applyBattlefieldMap();
     state.waveEnemiesTotal = waveEnemyTotal(1); state.waveEnemiesSpawned = 0;
     state.hearthMaxHp = 100 + prestigeHearthBonus() + achievementHearthBonus();
     state.hearthHp = state.hearthMaxHp;
@@ -4595,7 +4741,23 @@
     state.waveEnemiesTotal = waveEnemyTotal(state.wave);
     state.waveEnemiesSpawned = 0;
     waveLabel.textContent = 'Wave ' + state.wave + ' · Best ' + state.stats.bestWave;
-    showWaveBanner(state.wave);
+    applyBattlefieldMap();
+    if (challenge) {
+      if (challenge.type === 'eternalNight') {
+        waveLabel.textContent = 'Eternal Night — Survive!';
+      } else if (CHALLENGE_CONFIGS[challenge.type]) {
+        var cfg = CHALLENGE_CONFIGS[challenge.type];
+        waveLabel.textContent = '🔥 ' + cfg.label + ' — Trial ' + (challenge.wavesCleared + 1) + '/' + challenge.wavesTarget;
+      }
+      if (challenge.type === 'infernoTorrent') {
+        speedMult = 3;
+        speedBtn.textContent = '3x';
+        speedBtn.classList.add('active', 'locked');
+      }
+      showSaveToast('⚔️ Resuming your Ashen Trial in progress', false);
+    } else {
+      showWaveBanner(state.wave);
+    }
     requestAnimationFrame(loop);
   });
   document.addEventListener('visibilitychange', function() {
