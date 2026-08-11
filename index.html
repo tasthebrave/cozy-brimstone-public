@@ -159,8 +159,9 @@
     88% { opacity: 0.35; }
     100% { opacity: 0; transform: translateY(-210px) translateX(var(--dx, 14px)); }
   }
-  .path-line {
-    position: absolute; left: 3%; right: 3%; top: 50%; height: 10px; border-radius: 5px;
+  .path-line-track { position: absolute; left: 3%; right: 3%; top: 50%; height: 10px; }
+  .path-seg {
+    position: absolute; top: 0; height: 10px; border-radius: 5px;
     background: linear-gradient(90deg, rgba(202,160,106,0.5), rgba(90,70,45,0.4));
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
     transform: translateY(-50%);
@@ -463,6 +464,32 @@
   .lib-tab:hover { color: var(--ash); border-color: var(--gold); }
   .lib-tab.active { color: var(--gold); border-color: var(--gold); background: rgba(255,182,39,0.08); }
 
+  .buyqty-row { display: flex; align-items: center; gap: 6px; margin: -4px 0 14px; }
+  .buyqty-label { font-size: 9px; color: var(--ash-dim); letter-spacing: 0.5px; margin-right: 2px; }
+  .buyqty-btn {
+    flex: 1; text-align: center; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.5px;
+    color: var(--ash-dim); background: var(--bg-panel-2); border: 1px solid var(--steel);
+    border-radius: var(--radius-sm); padding: 6px 4px; cursor: pointer; transition: all 0.15s;
+  }
+  .buyqty-btn:hover { color: var(--ash); border-color: var(--gold); }
+  .buyqty-btn.active { color: var(--gold); border-color: var(--gold); background: rgba(255,182,39,0.08); }
+
+  .settings-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 10px 12px; border: 1px solid var(--steel); border-radius: var(--radius-sm);
+    margin-bottom: 8px; background: var(--bg-panel-2);
+  }
+  .settings-row-text { min-width: 0; }
+  .settings-row-label { font-size: 12px; color: var(--ash); }
+  .settings-row-desc { font-size: 9px; color: var(--ash-dim); margin-top: 2px; }
+  .settings-toggle {
+    flex-shrink: 0; font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 0.5px;
+    padding: 7px 16px; border-radius: 999px; border: 1px solid var(--steel); cursor: pointer;
+    color: var(--ash-dim); background: var(--bg-panel); transition: all 0.15s;
+  }
+  .settings-toggle:hover { border-color: var(--gold); }
+  .settings-toggle.on { color: var(--gold); border-color: var(--gold); background: rgba(255,182,39,0.12); }
+
   .blvl-card {
     border: 1px solid var(--wood); border-radius: var(--radius-md); padding: 12px 13px; margin-bottom: 12px;
     background: linear-gradient(180deg, rgba(202,160,106,0.09), rgba(202,160,106,0.02));
@@ -516,6 +543,8 @@
   .slot-menu .opt:hover { background: var(--bg-panel); }
   .slot-menu .opt.disabled { opacity: 0.4; cursor: default; }
   .slot-menu .close { text-align: right; font-size: 9px; color: var(--ash-dim); cursor: pointer; margin-top: 4px; }
+  .slot-menu .buyqty-row { display: flex; gap: 3px; margin: 2px 0 6px; }
+  .slot-menu .buyqty-btn { font-size: 8px; padding: 4px 2px; border-radius: 4px; }
 
   .float { position: absolute; pointer-events: none; font-size: 11px; font-weight: 700; animation: floatUp2 0.8s ease-out forwards; white-space: nowrap; }
   @keyframes floatUp2 { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
@@ -606,7 +635,6 @@
   <header>
     <h1>COZY BRIMSTONE</h1>
     <div class="subtitle">defend the frozen south pole from the demons pouring out of it</div>
-    <div class="help-btn" id="savecode-btn" style="margin-left:10px;">🔑 Save Code</div>
   </header>
 
   <div class="resource-bar">
@@ -626,13 +654,12 @@
 
   <div class="battlefield" id="battlefield">
     <div class="speed-controls">
-      <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
-      <button id="save-btn" class="icon-btn" title="Save Progress">💾</button>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙️</button>
       <button id="pause-btn" class="icon-btn" title="Pause">⏸</button>
       <button id="speed-btn" class="icon-btn" title="2x Speed">1x</button>
     </div>
     <div id="battlefield-embers"></div>
-    <div class="path-line"></div>
+    <div class="path-line-track" id="path-line-track"></div>
     <div class="hearth-icon">🏡</div>
     <div class="hell-portal" id="hell-portal" title="Venture into Hell">
       <div class="portal-ring"></div>
@@ -745,6 +772,7 @@
     warlockUnlocked: false,
     hpBonusMult: 1,
     soundEnabled: true,
+    hapticsEnabled: true,
     abilityReadyAt: 0, abilityBuffUntil: 0,
     archerAbilityReadyAt: 0,
     frostAbilityReadyAt: 0, freezeUntil: 0,
@@ -1052,6 +1080,7 @@
   }
 
   function haptic(pattern) {
+    if (!state.hapticsEnabled) return;
     try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* vibration unsupported */ }
   }
 
@@ -1327,12 +1356,15 @@
       if (slot.occupant.kind === 'tower' && TOWER_DEFS[slot.occupant.defId].type !== 'passive' && TOWER_DEFS[slot.occupant.defId].type !== 'trap') {
         var occTower = slot.occupant;
         var tLvl = occTower.towerLevel || 1;
-        var upCost = Math.ceil(15 * Math.pow(1.8, tLvl - 1) * ascensionCostMult());
-        if (challenge && challenge.type === 'loneChieftain' && occTower.defId === challenge.chosenTower) upCost = Math.ceil(upCost * 0.2);
-        addMenuOption(menu, 'Upgrade (Lv ' + tLvl + ' → ' + (tLvl + 1) + ')', state.gold >= upCost, upCost + '🪙', function() {
-          if (state.gold < upCost) return;
-          state.gold -= upCost;
-          occTower.towerLevel = tLvl + 1;
+        var chieftainDiscount = (challenge && challenge.type === 'loneChieftain' && occTower.defId === challenge.chosenTower) ? 0.2 : 1;
+        var towerCostFn = function(l) { return Math.ceil(15 * Math.pow(1.8, l - 1) * ascensionCostMult() * chieftainDiscount); };
+        var towerPlan = bulkBuyPlan(tLvl, undefined, state.gold, towerCostFn, uiBuyAmount);
+        menu.appendChild(buildBuyQtyRowEl(function() { openSlotMenu(i); }));
+        addMenuOption(menu, 'Upgrade (Lv ' + tLvl + ' → ' + (tLvl + Math.max(1, towerPlan.levels)) + ')', towerPlan.levels > 0, (towerPlan.levels > 0 ? towerPlan.totalCost : towerCostFn(tLvl)) + '🪙', function() {
+          var p = bulkBuyPlan(tLvl, undefined, state.gold, towerCostFn, uiBuyAmount);
+          if (p.levels <= 0) return;
+          state.gold -= p.totalCost;
+          occTower.towerLevel = tLvl + p.levels;
           renderResources(); renderSlot(i); closeSlotMenu(); save();
           SFX.levelUp();
         });
@@ -1357,15 +1389,21 @@
       if (slot.occupant.kind === 'blocker' && (slot.occupant.defId === 'wall' || slot.occupant.defId === 'barracksTower')) {
         var occBlock = slot.occupant;
         var bLvl = occBlock.blockerLevel || 1;
-        var bUpCost = Math.ceil((occBlock.defId === 'wall' ? 10 : 15) * Math.pow(1.75, bLvl - 1) * ascensionCostMult());
-        addMenuOption(menu, 'Upgrade (Lv ' + bLvl + ' → ' + (bLvl + 1) + ')', state.gold >= bUpCost, bUpCost + '🪙', function() {
-          if (state.gold < bUpCost) return;
-          state.gold -= bUpCost;
-          var hpGain = Math.round(occBlock.maxHp * 0.20);
-          occBlock.maxHp += hpGain;
-          occBlock.hp += hpGain;
-          if (occBlock.defId === 'barracksTower') occBlock.dmg += 1;
-          occBlock.blockerLevel = bLvl + 1;
+        var bBaseCost = occBlock.defId === 'wall' ? 10 : 15;
+        var blockerCostFn = function(l) { return Math.ceil(bBaseCost * Math.pow(1.75, l - 1) * ascensionCostMult()); };
+        var blockerPlan = bulkBuyPlan(bLvl, undefined, state.gold, blockerCostFn, uiBuyAmount);
+        menu.appendChild(buildBuyQtyRowEl(function() { openSlotMenu(i); }));
+        addMenuOption(menu, 'Upgrade (Lv ' + bLvl + ' → ' + (bLvl + Math.max(1, blockerPlan.levels)) + ')', blockerPlan.levels > 0, (blockerPlan.levels > 0 ? blockerPlan.totalCost : blockerCostFn(bLvl)) + '🪙', function() {
+          var p = bulkBuyPlan(bLvl, undefined, state.gold, blockerCostFn, uiBuyAmount);
+          if (p.levels <= 0) return;
+          state.gold -= p.totalCost;
+          for (var k = 0; k < p.levels; k++) {
+            var hpGain = Math.round(occBlock.maxHp * 0.20);
+            occBlock.maxHp += hpGain;
+            occBlock.hp += hpGain;
+            if (occBlock.defId === 'barracksTower') occBlock.dmg += 1;
+          }
+          occBlock.blockerLevel = bLvl + p.levels;
           renderResources(); renderSlot(i); closeSlotMenu(); save();
           SFX.levelUp();
         });
@@ -1735,17 +1773,7 @@
 
   var pauseBtn = document.getElementById('pause-btn');
   var speedBtn = document.getElementById('speed-btn');
-  var saveBtn = document.getElementById('save-btn');
-  var muteBtn = document.getElementById('mute-btn');
-  muteBtn.textContent = state.soundEnabled ? '🔊' : '🔇';
-  muteBtn.addEventListener('click', function() {
-    state.soundEnabled = !state.soundEnabled;
-    muteBtn.textContent = state.soundEnabled ? '🔊' : '🔇';
-    muteBtn.title = state.soundEnabled ? 'Mute' : 'Unmute';
-    muteBtn.classList.toggle('active', !state.soundEnabled);
-    if (state.soundEnabled) SFX.click();
-    save();
-  });
+  var settingsBtn = document.getElementById('settings-btn');
   var saveToast = document.getElementById('save-toast');
   var saveToastTimer = null;
   function showSaveToast(text, isError) {
@@ -1756,14 +1784,16 @@
     clearTimeout(saveToastTimer);
     saveToastTimer = setTimeout(function() { saveToast.classList.remove('show'); }, 1800);
   }
-  saveBtn.addEventListener('click', function() {
-    saveBtn.disabled = true;
-    save().then(function(ok) {
-      saveBtn.disabled = false;
+  function doManualSave(btn) {
+    if (btn) btn.disabled = true;
+    return save().then(function(ok) {
+      if (btn) btn.disabled = false;
       showSaveToast(ok ? '✓ Progress Saved' : '✕ Save failed — try again', !ok);
       if (ok) SFX.save();
+      return ok;
     });
-  });
+  }
+  settingsBtn.addEventListener('click', function() { SFX.click(); openSettings(); });
   pauseBtn.addEventListener('click', function() {
     SFX.click();
     paused = !paused;
@@ -2071,14 +2101,15 @@
     SFX.levelUp();
   }
 
-  var lastSpawn = 0, spawnInterval = 4000;
+  var lastSpawn = 0, spawnInterval = 2800;
   var lastWaveAt = 0;
   var nextSpawnAllowedAt = 0;
   var gameOver = false;
-  var WAVE_BREATHER_MS = 3000;
+  var WAVE_BREATHER_MS = 4500;
   var WAVE_BASE_ENEMIES = 10;
   var WAVE_GROWTH = 1.25;
   function waveEnemyTotal(wave) { return Math.round(WAVE_BASE_ENEMIES * Math.pow(WAVE_GROWTH, wave - 1)); }
+  function spawnIntervalForWave(wave) { return Math.max(180, 2800 - wave * 150); }
 
   // ---------- Ashen Trials: Eternal Night ----------
   var ETERNAL_NIGHT_DURATION_MS = 5 * 60 * 1000;
@@ -2107,7 +2138,7 @@
     state.demons.forEach(function(d) { var el = demonEls[d.id]; if (el) el.remove(); });
     state.demons = [];
     state.hearthHp = state.hearthMaxHp;
-    challenge = { type: 'eternalNight', startedAt: simTimeMs, endsAt: simTimeMs + ETERNAL_NIGHT_DURATION_MS, spawnInterval: 1400, snapshot: snapshot };
+    challenge = { type: 'eternalNight', startedAt: simTimeMs, endsAt: simTimeMs + ETERNAL_NIGHT_DURATION_MS, spawnInterval: 1000, snapshot: snapshot };
     hearthFill.style.width = '100%';
     waveLabel.textContent = 'Eternal Night — Survive!';
     var banner = document.getElementById('wave-banner');
@@ -2286,7 +2317,7 @@
       lastWaveAt = now;
       state.waveEnemiesTotal = waveEnemyTotal(state.wave);
       state.waveEnemiesSpawned = 0;
-      spawnInterval = Math.max(350, 4000 - state.wave * 180);
+      spawnInterval = spawnIntervalForWave(state.wave);
       nextSpawnAllowedAt = now + WAVE_BREATHER_MS;
       var cfg = CHALLENGE_CONFIGS[challenge.type];
       waveLabel.textContent = '🔥 ' + cfg.label + ' — Trial ' + (challenge.wavesCleared + 1) + '/' + challenge.wavesTarget;
@@ -2308,7 +2339,7 @@
       if (now >= challenge.endsAt) { endEternalNight(true); return; }
       var elapsed = now - challenge.startedAt;
       var accelSteps = Math.floor(elapsed / 10000);
-      var curInterval = Math.max(150, 1400 * Math.pow(0.98, accelSteps));
+      var curInterval = Math.max(100, 1000 * Math.pow(0.98, accelSteps));
       if (now - lastSpawn > curInterval) {
         lastSpawn = now;
         spawnDemon();
@@ -2334,7 +2365,7 @@
       lastWaveAt = now;
       state.waveEnemiesTotal = waveEnemyTotal(state.wave);
       state.waveEnemiesSpawned = 0;
-      spawnInterval = Math.max(350, 4000 - state.wave * 180);
+      spawnInterval = spawnIntervalForWave(state.wave);
       nextSpawnAllowedAt = now + (grandLvl('autoStoke') ? 0 : WAVE_BREATHER_MS);
       waveLabel.textContent = 'Wave ' + state.wave + ' · Best ' + state.stats.bestWave;
       if (state.wave % 5 === 0) {
@@ -2811,7 +2842,7 @@
     state.waveEnemiesTotal = waveEnemyTotal(1); state.waveEnemiesSpawned = 0;
     waveLabel.textContent = 'Wave 1 · Best ' + state.stats.bestWave;
     hearthFill.style.width = '100%';
-    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = 4000; nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
+    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = spawnIntervalForWave(1); nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
     gameOver = false;
     goOverlay.classList.remove('show');
   });
@@ -3034,7 +3065,24 @@
     battlefield.classList.add('map-' + m.key);
     repositionForCurve();
   }
+  var pathLineTrack = document.getElementById('path-line-track');
+  var PATH_SEG_COUNT = 24;
+  function renderPathLine() {
+    if (!pathLineTrack) return;
+    pathLineTrack.innerHTML = '';
+    var segWidth = 100 / PATH_SEG_COUNT;
+    for (var s = 0; s < PATH_SEG_COUNT; s++) {
+      var midPercent = ((s + 0.5) / PATH_SEG_COUNT) * 100;
+      var seg = document.createElement('div');
+      seg.className = 'path-seg';
+      seg.style.left = (s * segWidth) + '%';
+      seg.style.width = (segWidth + 0.6) + '%';
+      seg.style.top = 'calc(50% + ' + curOffset(midPercent) + 'px)';
+      pathLineTrack.appendChild(seg);
+    }
+  }
   function repositionForCurve() {
+    renderPathLine();
     state.slots.forEach(function(slot, i) {
       var el = slotEls[i];
       if (el) el.style.top = 'calc(50% + ' + (slot.side + curOffset(slot.percent)) + 'px)';
@@ -3512,11 +3560,14 @@
     setTimeout(function() { p.remove(); }, 650);
   }
 
-  // Iron Forge (condensed): single 6s cooling pass
+  // Iron Forge (condensed): single cooling pass, session length & rewards scale with endgame progress
   function openIronForge() {
+    var sessionMs = minigameSessionMs();
+    var bonusMs = minigameTimeBonusMs();
     openModal(
       '<h2>🔥 Iron Forge</h2>' +
-      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap the blade when it glows orange</div>' +
+      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap the blade when it glows orange' +
+      (bonusMs > 0 ? ' &middot; <span style="color:var(--gold);">+' + (bonusMs / 1000).toFixed(1) + 's from endgame progress</span>' : '') + '</div>' +
       '<div id="if-status" style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:8px;">SCORCHING</div>' +
       '<div style="display:flex;justify-content:center;"><button id="if-blade" type="button" style="width:90px;height:90px;border-radius:50%;border:2px solid var(--steel);background:#ff6b35;font-size:0;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;"></button></div>' +
       '<div style="max-width:260px;margin:16px auto 0;height:14px;border-radius:7px;background:#2b2825;border:1px solid var(--steel);position:relative;">' +
@@ -3536,13 +3587,13 @@
       zoneMarkerEl.style.width = (zoneHalf * 2) + '%';
     }
     rerollZone();
-    var ironPerHit = Math.round((4 + lvl('if_power') * 2) * buildingMult('forge') * prestigeResourceMult());
+    var ironPerHit = Math.round((4 + lvl('if_power') * 2) * buildingMult('forge') * prestigeResourceMult() * minigameRewardMult());
     var blade = document.getElementById('if-blade');
     var needle = document.getElementById('if-needle');
     var statusEl = document.getElementById('if-status');
     var resultEl = document.getElementById('if-result');
     var passDur = 3600;
-    var sessionEnd = performance.now() + 8000;
+    var sessionEnd = performance.now() + sessionMs;
     var active = true, hits = 0, streak = 0, passStart = performance.now(), lastClick = 0, totalIron = 0;
     function colorFor(t) {
       if (t > zoneMax) return '#fff8e7';
@@ -3606,11 +3657,14 @@
     requestAnimationFrame(frame);
   }
 
-  // Deep Mine (condensed): 8s single-crystal reflex
+  // Deep Mine (condensed): single-crystal reflex, session length & rewards scale with endgame progress
   function openDeepMine() {
+    var sessionMs = minigameSessionMs();
+    var bonusMs = minigameTimeBonusMs();
     openModal(
       '<h2>🪨 Deep Mine</h2>' +
-      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap glinting tiles fast — rare violet geodes clear Gideon\'s cooldown, and you might strike gold</div>' +
+      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap glinting tiles fast — rare violet geodes clear Gideon\'s cooldown, and you might strike gold' +
+      (bonusMs > 0 ? ' &middot; <span style="color:var(--gold);">+' + (bonusMs / 1000).toFixed(1) + 's from endgame progress</span>' : '') + '</div>' +
       '<div id="dm-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:220px;margin:0 auto;"></div>' +
       '<div id="dm-result" style="text-align:center;margin-top:10px;"></div>'
     );
@@ -3624,8 +3678,8 @@
       tiles.push(t);
     }
     var active = true, stoneMined = 0;
-    var endAt = performance.now() + 8000;
-    var stoneGain = Math.round((4 + lvl('dm_power') * 2) * buildingMult('mine') * prestigeResourceMult()), geodeGain = Math.round((15 + lvl('dm_power') * 3) * buildingMult('mine') * prestigeResourceMult());
+    var endAt = performance.now() + sessionMs;
+    var stoneGain = Math.round((4 + lvl('dm_power') * 2) * buildingMult('mine') * prestigeResourceMult() * minigameRewardMult()), geodeGain = Math.round((15 + lvl('dm_power') * 3) * buildingMult('mine') * prestigeResourceMult() * minigameRewardMult());
     var violetChance = Math.min(0.6, 0.16 + lvl('dm_luck') * 0.02);
     var crystalDur = Math.min(2000, 650 + lvl('dm_time') * 80);
     function spawn() {
@@ -3647,7 +3701,7 @@
           if (isViolet) SFX.geodeBurst(); else SFX.perfectHit();
           if (isViolet) state.abilityReadyAt = simTimeMs;
           if (Math.random() < 0.1) {
-            var goldGain = 3 + Math.floor(Math.random() * 4);
+            var goldGain = Math.round((3 + Math.floor(Math.random() * 4)) * minigameRewardMult());
             state.gold += goldGain; renderResources();
             modalFloat(resultEl, 'struck gold! +' + goldGain, '#ffb627');
           }
@@ -3662,11 +3716,14 @@
     spawn();
   }
 
-  // Lumber Yard (condensed): 8s swinging log
+  // Lumber Yard (condensed): swinging log, session length & rewards scale with endgame progress
   function openLumberYard() {
+    var sessionMs = minigameSessionMs();
+    var bonusMs = minigameTimeBonusMs();
     openModal(
       '<h2>🌲 Lumber Yard</h2>' +
-      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap when the needle hits green — streaks of 5 grant Heartwood</div>' +
+      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Tap when the needle hits green — streaks of 5 grant Heartwood' +
+      (bonusMs > 0 ? ' &middot; <span style="color:var(--gold);">+' + (bonusMs / 1000).toFixed(1) + 's from endgame progress</span>' : '') + '</div>' +
       '<div style="display:flex;justify-content:center;"><button id="ly-log" type="button" style="width:90px;height:90px;border-radius:50%;border:2px solid var(--wood);background:#5b4630;font-size:26px;cursor:pointer;outline:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;">🪵</button></div>' +
       '<div style="max-width:260px;margin:16px auto 0;height:12px;border-radius:6px;background:#3c2f20;border:1px solid #5b4630;position:relative;">' +
         '<div id="ly-zone-marker" style="position:absolute;top:-3px;bottom:-3px;background:rgba(125,220,107,0.3);border-left:2px solid var(--green);border-right:2px solid var(--green);"></div>' +
@@ -3685,7 +3742,7 @@
       zoneMarkerEl.style.width = (zoneHalf * 2) + '%';
     }
     rerollZone();
-    var woodPerHit = Math.round((5 + lvl('ly_power') * 2) * buildingMult('lumber') * prestigeResourceMult());
+    var woodPerHit = Math.round((5 + lvl('ly_power') * 2) * buildingMult('lumber') * prestigeResourceMult() * minigameRewardMult());
     var heartwoodBonus = 0.04 + lvl('ly_heartwood') * 0.02;
     var needle = document.getElementById('ly-needle');
     var streakEl = document.getElementById('ly-streak');
@@ -3702,7 +3759,7 @@
       }
       var pos = 50 + 50 * Math.sin(elapsed / PERIOD * Math.PI * 2);
       needle.style.left = pos + '%';
-      if (elapsed >= 8000) { active = false; finish(); return; }
+      if (elapsed >= sessionMs) { active = false; finish(); return; }
       requestAnimationFrame(frame);
     }
     document.getElementById('ly-log').addEventListener('click', function() {
@@ -3732,11 +3789,14 @@
     requestAnimationFrame(frame);
   }
 
-  // War Barracks (condensed): 8s QTE chains — this is where towers come from
+  // War Barracks (condensed): QTE chains, session length scales with endgame progress — this is where towers come from
   function openWarBarracks() {
+    var sessionMs = minigameSessionMs();
+    var bonusMs = minigameTimeBonusMs();
     openModal(
       '<h2>⚔️ War Barracks</h2>' +
-      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Swipe the box or use arrow keys — flawless chains train Captains, your best repair crew and Barracks Tower fuel</div>' +
+      '<div style="text-align:center;font-size:11px;color:var(--ash-dim);margin-bottom:10px;">Swipe the box or use arrow keys — flawless chains train Captains, your best repair crew and Barracks Tower fuel' +
+      (bonusMs > 0 ? ' &middot; <span style="color:var(--gold);">+' + (bonusMs / 1000).toFixed(1) + 's from endgame progress</span>' : '') + '</div>' +
       '<div id="wb-seq" style="display:flex;justify-content:center;gap:6px;min-height:40px;"></div>' +
       '<div id="wb-zone" style="max-width:220px;height:90px;margin:12px auto 0;border:1px dashed var(--steel);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--steel);font-size:20px;touch-action:none;">⇅ ⇄</div>' +
       '<div id="wb-result" style="text-align:center;margin-top:8px;"></div>'
@@ -3747,7 +3807,7 @@
     var glyph = { up: '▲', down: '▼', left: '◀', right: '▶' };
     var active = true, grunts = 0, captains = 0;
     var sequence = [], idx = 0, arrowTimeout = null;
-    var endAt = performance.now() + 8000;
+    var endAt = performance.now() + sessionMs;
     var arrowWindow = Math.min(2500, Math.round((900 + lvl('wb_window') * 120) * buildingMult('barracks')));
     var startLen = Math.max(2, 3 - lvl('wb_shorter'));
 
@@ -3785,8 +3845,11 @@
       setTimeout(function() { if (active) newSeq(); }, 450);
     }
     function success() {
-      captains++; state.captains++; renderResources();
-      modalFloat(resultEl, 'ELITE CAPTAIN!', '#ffb627');
+      captains++; state.captains++;
+      var bonusGold = Math.round(2 * (minigameRewardMult() - 1));
+      if (bonusGold > 0) { state.gold += bonusGold; modalFloat(resultEl, 'ELITE CAPTAIN! +' + bonusGold + '🪙', '#ffb627'); }
+      else { modalFloat(resultEl, 'ELITE CAPTAIN!', '#ffb627'); }
+      renderResources();
       SFX.perfectHit();
       setTimeout(function() { if (active) newSeq(); }, 450);
     }
@@ -4048,9 +4111,7 @@
     }
     state.tutorialSeen = !!l.tutorialSeen;
     state.soundEnabled = l.soundEnabled === undefined ? true : !!l.soundEnabled;
-    muteBtn.textContent = state.soundEnabled ? '🔊' : '🔇';
-    muteBtn.title = state.soundEnabled ? 'Mute' : 'Unmute';
-    muteBtn.classList.toggle('active', !state.soundEnabled);
+    state.hapticsEnabled = l.hapticsEnabled === undefined ? true : !!l.hapticsEnabled;
     if (l.stats) { Object.keys(state.stats).forEach(function(k) { state.stats[k] = l.stats[k] || state.stats[k]; }); }
     if (l.discovered) state.discovered = l.discovered;
     if (l.killsByType) state.killsByType = l.killsByType;
@@ -4138,7 +4199,7 @@
       hpBonusMult: state.hpBonusMult, hearthMaxHp: state.hearthMaxHp,
       upgrades: state.upgrades, upgradePending: state.upgradePending,
       buildingLevels: state.buildingLevels, buildingUpgrading: state.buildingUpgrading,
-      tutorialSeen: state.tutorialSeen, soundEnabled: state.soundEnabled,
+      tutorialSeen: state.tutorialSeen, soundEnabled: state.soundEnabled, hapticsEnabled: state.hapticsEnabled,
       stats: state.stats, discovered: state.discovered, killsByType: state.killsByType,
       heroLevels: state.heroLevels, heroTraining: state.heroTraining,
       missionsCompleted: state.missionsCompleted,
@@ -4192,6 +4253,61 @@
   function ascensionBonus() { return prestigeLvl('ascension'); }
   function ascensionCostMult() { return Math.max(0.3, 1 - ascensionBonus() * 0.05) * sovereignUpgradeCostMult(); }
 
+  // ---------- Shared bulk-buy (1 / 5 / 10 / 100 / MAX) ----------
+  var BUY_AMOUNTS = [1, 5, 10, 100, 'max'];
+  var uiBuyAmount = 1;
+  function buyQtyLabel(a) { return a === 'max' ? 'MAX' : ('x' + a); }
+  // costFn(l) returns the resource cost of purchasing the level after l (i.e. going from l to l+1).
+  function bulkBuyPlan(startLvl, maxLevel, budget, costFn, qty) {
+    var levels = 0, totalCost = 0, cur = startLvl;
+    var remaining = (maxLevel === undefined || maxLevel === null) ? Infinity : Math.max(0, maxLevel - startLvl);
+    var limit = (qty === 'max') ? remaining : Math.min(qty, remaining);
+    if (limit === Infinity) limit = 10000; // safety guard for uncapped upgrades
+    for (var i = 0; i < limit; i++) {
+      var c = costFn(cur);
+      if (totalCost + c > budget) break;
+      totalCost += c;
+      cur++;
+      levels++;
+    }
+    return { levels: levels, totalCost: totalCost };
+  }
+  function buyQtyRowHtml() {
+    var html = '<div class="buyqty-row"><span class="buyqty-label">BUY</span>';
+    BUY_AMOUNTS.forEach(function(a) {
+      html += '<div class="buyqty-btn' + (uiBuyAmount === a ? ' active' : '') + '" data-amt="' + a + '">' + buyQtyLabel(a) + '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+  function wireBuyQtyRow(onChange) {
+    document.querySelectorAll('.buyqty-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var raw = btn.getAttribute('data-amt');
+        uiBuyAmount = raw === 'max' ? 'max' : parseInt(raw, 10);
+        SFX.click();
+        onChange();
+      });
+    });
+  }
+  function buildBuyQtyRowEl(onChange) {
+    var row = document.createElement('div');
+    row.className = 'buyqty-row';
+    BUY_AMOUNTS.forEach(function(a) {
+      var btn = document.createElement('div');
+      btn.className = 'buyqty-btn' + (uiBuyAmount === a ? ' active' : '');
+      btn.textContent = buyQtyLabel(a);
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        uiBuyAmount = a;
+        SFX.click();
+        onChange();
+      });
+      row.appendChild(btn);
+    });
+    return row;
+  }
+
   // ---------- Grand Prestige: The Great Ritual ----------
   var GRAND_PRESTIGE_NODES = [
     { id: 'autoStoke', branch: 'A', icon: '⏩', name: 'Auto-Stoke', desc: 'Unlocks a toggle to skip the breather and instantly start the next wave the moment the current one is wiped.', cost: 1, maxLevel: 1 },
@@ -4227,6 +4343,24 @@
   function coreExpansionChance() { return grandLvl('coreExpansion') * 0.10; }
   function riftHarmonizerMult() { return 1 + grandLvl('riftHarmonizer') * 0.25; }
 
+  // ---------- Endgame progress feeding back into the minigames ----------
+  // The more you've invested in Prestige and The Great Ritual, the longer and more
+  // lucrative every minigame trip becomes — keeps the core loop worth returning to late-game.
+  function grandTotalLevels() {
+    var sum = 0;
+    Object.keys(state.grandPrestige.nodes).forEach(function(k) { sum += state.grandPrestige.nodes[k] || 0; });
+    return sum;
+  }
+  function minigameTimeBonusMs() {
+    var bonus = grandTotalLevels() * 250 + (state.prestige.tier || 0) * 150 + (state.grandPrestige.ritualCount || 0) * 600;
+    return Math.min(12000, Math.round(bonus));
+  }
+  function minigameSessionMs() { return 8000 + minigameTimeBonusMs(); }
+  function minigameRewardMult() {
+    var mult = 1 + grandTotalLevels() * 0.02 + (state.prestige.tier || 0) * 0.01 + (state.grandPrestige.ritualCount || 0) * 0.06;
+    return Math.min(3, mult);
+  }
+
   var SOVEREIGN_BOONS = [
     { key: 'eternalNight', name: 'Ember Surge', desc: '+15% tower attack speed, always active.' },
     { key: 'goldless', name: "Scavenger's Eye", desc: '+15% gold from every kill, always active.' },
@@ -4240,12 +4374,15 @@
   function sovereignBarbarianMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'bloodCovenant') ? 1.5 : 1; }
   function sovereignUpgradeCostMult() { return (grandLvl('sovereignOverlord') && state.sovereignChoice === 'loneChieftain') ? 0.8 : 1; }
 
-  function buyGrandNode(def) {
-    if (grandMaxed(def)) return;
-    var cost = grandCost(def);
-    if (state.grandPrestige.cores < cost) return;
-    state.grandPrestige.cores -= cost;
-    state.grandPrestige.nodes[def.id]++;
+  function grandBuyPlan(def, qty) {
+    if (grandMaxed(def)) return { levels: 0, totalCost: 0 };
+    return bulkBuyPlan(grandLvl(def.id), def.maxLevel, state.grandPrestige.cores, function() { return grandCost(def); }, qty);
+  }
+  function buyGrandNode(def, qty) {
+    var plan = grandBuyPlan(def, qty || 1);
+    if (plan.levels <= 0) return;
+    state.grandPrestige.cores -= plan.totalCost;
+    state.grandPrestige.nodes[def.id] += plan.levels;
     SFX.levelUp();
     renderResources(); save();
   }
@@ -4291,7 +4428,7 @@
     state.hearthHp = state.hearthMaxHp;
     waveLabel.textContent = 'Wave 1 · Best ' + state.stats.bestWave;
     hearthFill.style.width = '100%';
-    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = 4000; nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
+    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = spawnIntervalForWave(1); nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
 
     document.body.classList.remove('tier-embers', 'tier-coals', 'tier-inferno');
     applyShardTierVisuals();
@@ -4315,6 +4452,24 @@
   function prestigeTreasureBonus() { return prestigeLvl('treasurelust') * 0.01; }
 
   // ---------- Achievements & Trophies ----------
+  function relicCount() {
+    return Object.keys(EQUIPMENT_DEFS).filter(function(id) { return EQUIPMENT_DEFS[id].relic && state.craftedEquip[id]; }).length;
+  }
+  function bestTowerLevel() {
+    var best = 0;
+    state.slots.forEach(function(s) { if (s.occupant && s.occupant.kind === 'tower') best = Math.max(best, s.occupant.towerLevel || 1); });
+    return best;
+  }
+  function bestBlockerLevel() {
+    var best = 0;
+    state.slots.forEach(function(s) { if (s.occupant && s.occupant.kind === 'blocker') best = Math.max(best, s.occupant.blockerLevel || 1); });
+    return best;
+  }
+  function maxGearOnAnyTower() {
+    var best = 0;
+    state.slots.forEach(function(s) { if (s.occupant && s.occupant.kind === 'tower') best = Math.max(best, (s.occupant.equipment || []).length); });
+    return best;
+  }
   var ACHIEVEMENTS = [
     { id: 'firstBlood', icon: '🗡️', name: 'First Blood', desc: 'Kill your first demon.', check: function() { return state.stats.totalKills >= 1; }, bonuses: [{ type: 'dmg', value: 0.01 }] },
     { id: 'veteranSlayer', icon: '⚔️', name: 'Veteran Slayer', desc: 'Kill 500 demons.', check: function() { return state.stats.totalKills >= 500; }, bonuses: [{ type: 'dmg', value: 0.02 }] },
@@ -4326,10 +4481,20 @@
     { id: 'treasureFinder', icon: '💰', name: 'Treasure Finder', desc: 'Slay your first Treasure Demon.', check: function() { return (state.killsByType.treasure || 0) >= 1; }, bonuses: [{ type: 'gold', value: 0.05 }] },
     { id: 'treasureHoarder', icon: '💰', name: 'Treasure Hoarder', desc: 'Slay 10 Treasure Demons.', check: function() { return (state.killsByType.treasure || 0) >= 10; }, bonuses: [{ type: 'gold', value: 0.10 }] },
     { id: 'portalDiver', icon: '🌋', name: 'Portal Diver', desc: 'Reach Hell Portal Level 30.', check: function() { return (state.hellPortalBest || 0) >= 30; }, bonuses: [{ type: 'gold', value: 0.05 }] },
+    { id: 'deepDelver', icon: '🌀', name: 'Deep Delver', desc: 'Reach Hell Portal Level 50 and witness every biome.', check: function() { return (state.hellPortalBest || 0) >= 50; }, bonuses: [{ type: 'gold', value: 0.05 }] },
     { id: 'fullRoster', icon: '🦸', name: 'Full Roster', desc: 'Hire all 5 heroes.', check: function() { return state.heroUnlocked && state.archerUnlocked && state.frostUnlocked && state.dwarfUnlocked && state.warlockUnlocked; }, bonuses: [{ type: 'hearth', value: 25 }] },
     { id: 'prestigeVeteran', icon: '✨', name: 'Prestige Veteran', desc: 'Prestige 5 times.', check: function() { return (state.prestige.count || 0) >= 5; }, bonuses: [{ type: 'dmg', value: 0.03 }] },
     { id: 'prestigeLegend', icon: '✨', name: 'Prestige Legend', desc: 'Prestige 20 times.', check: function() { return (state.prestige.count || 0) >= 20; }, bonuses: [{ type: 'dmg', value: 0.05 }] },
-    { id: 'trialMaster', icon: '🔥', name: 'Trial Master', desc: 'Complete all 5 Ashen Trials.', check: function() { return state.ashenTrials.eternalNight && state.ashenTrials.goldless && state.ashenTrials.chilledEarth && state.ashenTrials.bloodCovenant && state.ashenTrials.loneChieftain; }, bonuses: [{ type: 'dmg', value: 0.05 }, { type: 'gold', value: 0.05 }] }
+    { id: 'trialMaster', icon: '🔥', name: 'Trial Master', desc: 'Complete all 5 Ashen Trials.', check: function() { return state.ashenTrials.eternalNight && state.ashenTrials.goldless && state.ashenTrials.chilledEarth && state.ashenTrials.bloodCovenant && state.ashenTrials.loneChieftain; }, bonuses: [{ type: 'dmg', value: 0.05 }, { type: 'gold', value: 0.05 }] },
+    { id: 'grandRitualist', icon: '🔱', name: 'Grand Ritualist', desc: 'Perform The Great Ritual for the first time.', check: function() { return (state.grandPrestige.ritualCount || 0) >= 1; }, bonuses: [{ type: 'dmg', value: 0.03 }] },
+    { id: 'ritualAscendant', icon: '👑', name: 'Ritual Ascendant', desc: 'Perform The Great Ritual 5 times.', check: function() { return (state.grandPrestige.ritualCount || 0) >= 5; }, bonuses: [{ type: 'dmg', value: 0.05 }] },
+    { id: 'coreCollector', icon: '🔮', name: 'Core Collector', desc: 'Invest 25 total levels into Grand Prestige nodes.', check: function() { return grandTotalLevels() >= 25; }, bonuses: [{ type: 'gold', value: 0.05 }] },
+    { id: 'sovereignChosen', icon: '🎲', name: "Sovereign's Choice", desc: 'Choose a permanent Sovereign Boon.', check: function() { return !!state.sovereignChoice; }, bonuses: [{ type: 'dmg', value: 0.02 }] },
+    { id: 'relicHunter', icon: '💎', name: 'Relic Hunter', desc: 'Claim your first biome Relic.', check: function() { return relicCount() >= 1; }, bonuses: [{ type: 'gold', value: 0.03 }] },
+    { id: 'relicCollector', icon: '🏺', name: 'Relic Collector', desc: 'Claim all 5 biome Relics.', check: function() { return relicCount() >= 5; }, bonuses: [{ type: 'dmg', value: 0.05 }] },
+    { id: 'fullyGeared', icon: '⚙️', name: 'Fully Geared', desc: 'Equip 3 pieces of gear on a single tower.', check: function() { return maxGearOnAnyTower() >= 3; }, bonuses: [{ type: 'dmg', value: 0.03 }] },
+    { id: 'towerMaster', icon: '🏹', name: 'Tower Master', desc: 'Upgrade any tower to Level 15.', check: function() { return bestTowerLevel() >= 15; }, bonuses: [{ type: 'dmg', value: 0.04 }] },
+    { id: 'ironclad', icon: '🧱', name: 'Ironclad', desc: 'Upgrade a Wall or Barracks Tower to Level 10.', check: function() { return bestBlockerLevel() >= 10; }, bonuses: [{ type: 'hearth', value: 15 }] }
   ];
   function achievementBonusTotal(type) {
     var sum = 0;
@@ -4382,13 +4547,16 @@
     document.body.classList.remove('tier-embers', 'tier-coals', 'tier-inferno');
     document.body.classList.add('tier-' + t.key);
   }
-  function buyPrestigeUpgrade(def) {
-    if (prestigeMaxed(def)) return;
-    var cost = prestigeCost(def);
-    if (state.prestige.shards < cost) return;
-    state.prestige.shards -= cost;
-    state.prestige.upgrades[def.id]++;
-    state.prestige.tier = (state.prestige.tier || 0) + 1;
+  function prestigeBuyPlan(def, qty) {
+    if (prestigeMaxed(def)) return { levels: 0, totalCost: 0 };
+    return bulkBuyPlan(prestigeLvl(def.id), def.maxLevel, state.prestige.shards, function(l) { return Math.ceil(def.baseCost * Math.pow(def.costMult, l)); }, qty);
+  }
+  function buyPrestigeUpgrade(def, qty) {
+    var plan = prestigeBuyPlan(def, qty || 1);
+    if (plan.levels <= 0) return;
+    state.prestige.shards -= plan.totalCost;
+    state.prestige.upgrades[def.id] += plan.levels;
+    state.prestige.tier = (state.prestige.tier || 0) + plan.levels;
     SFX.levelUp();
     renderResources(); save();
   }
@@ -4442,16 +4610,20 @@
       '<div class="blvl-desc">Prestiging now grants <b style="color:var(--gold);">' + potential + '</b> Ember Shards 💠 (banked: ' + state.prestige.shards + ')</div>' +
       '<div class="blvl-btn' + (ready ? '' : ' disabled') + '" id="do-prestige-btn">' + (ready ? 'Prestige Now' : 'Reach Wave ' + PRESTIGE_MIN_WAVE + ' to Prestige') + '</div></div>';
     html += '<div class="ug-section-title">💠 Ember Upgrades</div>';
+    html += buyQtyRowHtml();
     PRESTIGE_UPGRADES.forEach(function(def) {
       var lv = prestigeLvl(def.id);
       var maxed = prestigeMaxed(def);
       var tierLocked = def.requiresTier && tierIdx < SHARD_TIERS.findIndex(function(t) { return t.key === def.requiresTier; });
-      var afford = !maxed && !tierLocked && state.prestige.shards >= prestigeCost(def);
+      var plan = (!maxed && !tierLocked) ? prestigeBuyPlan(def, uiBuyAmount) : { levels: 0, totalCost: 0 };
+      var afford = !maxed && !tierLocked && plan.levels > 0;
       html += '<div class="ug-row' + (maxed ? ' maxed' : tierLocked ? ' locked' : afford ? ' affordable' : '') + '" id="pug-' + def.id + '">' +
         '<div class="ug-top"><span class="ug-name">' + def.name + '</span><span class="ug-level-tag">Lv ' + lv + (def.maxLevel ? '/' + def.maxLevel : '') + '</span></div>' +
         '<div class="ug-desc">' + def.desc + '</div>' +
         (tierLocked ? '<div class="ug-footer locked-txt">🔒 Requires ' + SHARD_TIERS.find(function(t) { return t.key === def.requiresTier; }).name + ' tier (' + SHARD_TIERS.find(function(t) { return t.key === def.requiresTier; }).min + '+ lifetime shards)</div>'
-          : '<div class="ug-footer ' + (maxed ? 'maxed-txt' : 'cost') + '">' + (maxed ? 'MAXED' : prestigeCost(def) + '💠') + '</div>') + '</div>';
+          : maxed ? '<div class="ug-footer maxed-txt">MAXED</div>'
+          : plan.levels > 0 ? '<div class="ug-footer cost">Buy ' + plan.levels + (plan.levels > 1 ? ' levels' : ' level') + ' — ' + plan.totalCost + '💠</div>'
+          : '<div class="ug-footer">' + prestigeCost(def) + '💠 needed</div>') + '</div>';
     });
 
     html += '<div class="ug-section-title">🔥 Ashen Trials</div>';
@@ -4485,16 +4657,19 @@
       { key: 'H', title: '⚡ Hero Ascension & Overload' },
       { key: 'S', title: '🏛️ Structural Infrastructure' }
     ];
+    html += buyQtyRowHtml();
     GRAND_BRANCHES.forEach(function(branch) {
       html += '<div class="ug-section-title">' + branch.title + '</div>';
       GRAND_PRESTIGE_NODES.filter(function(n) { return n.branch === branch.key; }).forEach(function(def) {
         var lv = grandLvl(def.id);
         var maxed = grandMaxed(def);
-        var afford = !maxed && state.grandPrestige.cores >= grandCost(def);
+        var plan = maxed ? { levels: 0, totalCost: 0 } : grandBuyPlan(def, uiBuyAmount);
+        var afford = !maxed && plan.levels > 0;
         html += '<div class="ug-row' + (maxed ? ' maxed' : afford ? ' affordable' : '') + '" id="gp-' + def.id + '" style="' + (def.capstone ? 'border-color:#a855f7;' : '') + '">' +
           '<div class="ug-top"><span class="ug-name">' + def.icon + ' ' + def.name + (def.capstone ? ' <span style="color:#a855f7;">★</span>' : '') + '</span><span class="ug-level-tag">Lv ' + lv + '/' + def.maxLevel + '</span></div>' +
           '<div class="ug-desc">' + def.desc + '</div>' +
-          '<div class="ug-footer ' + (maxed ? 'maxed-txt' : 'cost') + '">' + (maxed ? 'MAXED' : grandCost(def) + '🔮') + '</div></div>';
+          '<div class="ug-footer ' + (maxed ? 'maxed-txt' : plan.levels > 0 ? 'cost' : '') + '">' +
+          (maxed ? 'MAXED' : plan.levels > 0 ? 'Buy ' + plan.levels + (plan.levels > 1 ? ' levels' : ' level') + ' — ' + plan.totalCost + '🔮' : grandCost(def) + '🔮 needed') + '</div></div>';
         if (def.id === 'layoutArchive' && lv > 0) {
           html += '<div class="blvl-card"><div class="blvl-btn" id="save-layout-btn">💾 Save Current Layout (' + (state.savedLayout ? 'saved' : 'none saved') + ')</div></div>';
         }
@@ -4513,13 +4688,15 @@
     openModal(html);
     var pbtn = document.getElementById('do-prestige-btn');
     if (ready) pbtn.addEventListener('click', function() { doPrestige(); closeModal(); });
+    wireBuyQtyRow(function() { openWarRoom(); });
     PRESTIGE_UPGRADES.forEach(function(def) {
       var tierLocked = def.requiresTier && tierIdx < SHARD_TIERS.findIndex(function(t) { return t.key === def.requiresTier; });
       if (prestigeMaxed(def) || tierLocked) return;
       var row = document.getElementById('pug-' + def.id);
       row.addEventListener('click', function() {
-        if (state.prestige.shards < prestigeCost(def)) return;
-        buyPrestigeUpgrade(def);
+        var plan = prestigeBuyPlan(def, uiBuyAmount);
+        if (plan.levels <= 0) return;
+        buyPrestigeUpgrade(def, plan.levels);
         openWarRoom();
       });
     });
@@ -4540,8 +4717,9 @@
       if (grandMaxed(def)) return;
       var row = document.getElementById('gp-' + def.id);
       row.addEventListener('click', function() {
-        if (state.grandPrestige.cores < grandCost(def)) return;
-        buyGrandNode(def);
+        var plan = grandBuyPlan(def, uiBuyAmount);
+        if (plan.levels <= 0) return;
+        buyGrandNode(def, plan.levels);
         openWarRoom();
       });
     });
@@ -4664,7 +4842,7 @@
     state.hearthHp = state.hearthMaxHp;
     waveLabel.textContent = 'Wave 1 · Best ' + state.stats.bestWave;
     hearthFill.style.width = '100%';
-    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = 4000; nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
+    lastWaveAt = simTimeMs; lastSpawn = 0; spawnInterval = spawnIntervalForWave(1); nextSpawnAllowedAt = simTimeMs + WAVE_BREATHER_MS;
     gameOver = false; goOverlay.classList.remove('show');
 
     state.wood = 0; state.iron = 0; state.stone = 0; state.gold = 0; state.grunts = 0; state.captains = 0;
@@ -4687,17 +4865,41 @@
     showSaveToast('✨ Prestiged! +' + earned + ' Ember Shards', false);
   }
 
-  function openSaveCode() {
-    var code = exportSaveCode();
-    var html = '<h2>🔑 Save Code</h2>' +
-      '<div class="ug-intro">Copy this code to back up your progress or move it elsewhere. Paste a code below and load it to restore a save — this will overwrite your current progress.</div>' +
+  function openSettings() {
+    var html = '<h2>⚙️ Settings</h2>' +
+      '<div class="ug-section-title">Audio &amp; Feedback</div>' +
+      '<div class="settings-row"><div class="settings-row-text"><div class="settings-row-label">🔊 Sound Effects</div><div class="settings-row-desc">Forge clangs, hits, level-ups, and more.</div></div>' +
+        '<div class="settings-toggle' + (state.soundEnabled ? ' on' : '') + '" id="set-sound-toggle">' + (state.soundEnabled ? 'ON' : 'OFF') + '</div></div>' +
+      '<div class="settings-row"><div class="settings-row-text"><div class="settings-row-label">📳 Haptics</div><div class="settings-row-desc">Vibration on hits and taps (device permitting).</div></div>' +
+        '<div class="settings-toggle' + (state.hapticsEnabled ? ' on' : '') + '" id="set-haptics-toggle">' + (state.hapticsEnabled ? 'ON' : 'OFF') + '</div></div>' +
+      '<div class="ug-section-title">Save Data</div>' +
+      '<div class="settings-row"><div class="settings-row-text"><div class="settings-row-label">💾 Manual Save</div><div class="settings-row-desc">Your progress also autosaves as you play.</div></div>' +
+        '<button class="btn" id="set-save-now-btn" style="flex-shrink:0;">Save Now</button></div>' +
+      '<div class="ug-intro">Copy your save code to back it up or move it to another device. Paste a code below and load it to restore a save — this will overwrite your current progress.</div>' +
       '<div class="ug-section-title">Your Save Code</div>' +
-      '<textarea id="save-code-out" readonly style="width:100%;min-height:70px;background:var(--bg-panel);border:1px solid var(--steel);border-radius:6px;color:var(--ash);font-size:10px;padding:8px;font-family:monospace;resize:vertical;">' + (code || 'Could not generate a code.') + '</textarea>' +
+      '<textarea id="save-code-out" readonly style="width:100%;min-height:70px;background:var(--bg-panel);border:1px solid var(--steel);border-radius:6px;color:var(--ash);font-size:10px;padding:8px;font-family:monospace;resize:vertical;">' + (exportSaveCode() || 'Could not generate a code.') + '</textarea>' +
       '<div class="combat-actions"><button class="btn" id="copy-code-btn">Copy Code</button></div>' +
       '<div class="ug-section-title">Load a Save Code</div>' +
       '<textarea id="save-code-in" placeholder="Paste a save code here…" style="width:100%;min-height:70px;background:var(--bg-panel);border:1px solid var(--steel);border-radius:6px;color:var(--ash);font-size:10px;padding:8px;font-family:monospace;resize:vertical;"></textarea>' +
       '<div class="combat-actions"><button class="btn" id="load-code-btn">Load Code (overwrites current save)</button></div>';
     openModal(html);
+    document.getElementById('set-sound-toggle').addEventListener('click', function() {
+      state.soundEnabled = !state.soundEnabled;
+      if (state.soundEnabled) SFX.click();
+      save();
+      openSettings();
+    });
+    document.getElementById('set-haptics-toggle').addEventListener('click', function() {
+      state.hapticsEnabled = !state.hapticsEnabled;
+      if (state.hapticsEnabled) haptic(15);
+      SFX.click();
+      save();
+      openSettings();
+    });
+    document.getElementById('set-save-now-btn').addEventListener('click', function(e) {
+      SFX.click();
+      doManualSave(e.currentTarget);
+    });
     document.getElementById('copy-code-btn').addEventListener('click', function() {
       var ta = document.getElementById('save-code-out');
       ta.select();
@@ -4714,7 +4916,6 @@
       if (ok) { SFX.levelUp(); closeModal(); }
     });
   }
-  document.getElementById('savecode-btn').addEventListener('click', function() { SFX.click(); openSaveCode(); });
 
   async function load() {
     try {
