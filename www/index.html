@@ -31,7 +31,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; background: var(--bg-void); color: var(--ash); font-family: 'JetBrains Mono', monospace; overflow-x: hidden; transition: background 1.2s ease; }
-  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
+  #app { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; padding-bottom: 142px; }
 
   /* ---- Shard Tiers ---- */
   body.tier-coals { background: radial-gradient(ellipse at 50% 0%, #1a1410 0%, var(--bg-void) 65%); }
@@ -294,7 +294,7 @@
 
   .slot {
     position: absolute; top: 50%; z-index: 7; transform: translate(-50%, -50%);
-    width: 58px; height: 58px; border-radius: 10px;
+    width: 46px; height: 46px; border-radius: 8px;
     background: rgba(18,20,24,.28); border: 1px dashed rgba(138,141,153,.28);
     display: flex; align-items: center; justify-content: center;
     font-size: 17px; cursor: pointer;
@@ -486,10 +486,28 @@
 
   .wave-label { text-align: center; font-size: 10px; color: var(--ash-dim); text-transform: uppercase; letter-spacing: 2px; margin: 8px 0 0; }
 
-  .ability-row { display: flex; justify-content: center; margin: 18px 16px 0; }
-
+  .ability-dock { display: flex; gap: 6px; padding: 10px 12px 0; overflow-x: auto; }
+  .ability-row { display: flex; flex: 1 0 58px; justify-content: center; margin: 0; }
+  .ability-row .btn { width: 100%; min-height: 54px; padding: 5px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  #gideon-ability-row { order: 1; }
+  #archer-ability-row { order: 2; }
+  #frost-ability-row { order: 3; }
+  #dwarf-ability-row { order: 4; }
+  #warlock-ability-row { order: 5; }
+  #warcry-ability-row { order: 6; }
+  .hero-ability-icon { font-size: 20px; line-height: 1; }
+  .hero-ability-label { font-size: 8px; line-height: 1.1; white-space: nowrap; }
+  .hero-ability-label.ready { color: var(--gold); }
+  
   .buildings-label { text-align: center; font-size: 10px; color: var(--ash-dim); text-transform: uppercase; letter-spacing: 2px; margin: 26px 0 12px; }
-  .buildings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 0 16px 32px; }
+  .buildings-label { display: none; }
+  .buildings-row {
+    position: fixed; z-index: 45; bottom: 0; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 5px; width: min(100%, 480px); padding: 7px 8px calc(7px + env(safe-area-inset-bottom));
+    overflow-x: auto; background: rgba(11, 13, 17, .96); border-top: 1px solid var(--steel);
+    box-shadow: 0 -8px 20px rgba(0,0,0,.35); scrollbar-width: none;
+  }
+  .buildings-row::-webkit-scrollbar { display: none; }
   .building-btn {
     position: relative;
     background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
@@ -498,6 +516,11 @@
     box-shadow: var(--shadow-card);
     transition: border-color 0.15s, transform 0.08s, box-shadow 0.15s;
   }
+  .buildings-row .building-btn { grid-column: auto !important; flex: 0 0 64px; min-height: 56px; padding: 5px 3px; border-radius: 8px; }
+  .buildings-row .building-btn .bicon { font-size: 20px; margin-bottom: 2px; }
+  .buildings-row .building-btn .bicon svg { width: 23px; height: 23px; }
+  .buildings-row .building-btn .bname { display: block; font-size: 7px; letter-spacing: .35px; line-height: 1.15; }
+  .buildings-row .building-btn .bdesc, .buildings-row .building-btn .blevel, .buildings-row .building-btn .bprog { display: none !important; }
   .building-btn:hover { border-color: var(--wood); box-shadow: var(--shadow-card), 0 0 0 1px rgba(202,160,106,0.25); }
   .building-btn:active { transform: scale(0.98); }
   .building-btn .bicon { font-size: 24px; display: block; margin-bottom: 5px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)); }
@@ -508,7 +531,7 @@
   .building-btn .bprog { height: 4px; border-radius: 2px; background: var(--steel); overflow: hidden; margin-top: 6px; }
   .building-btn .bprog div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--ember), var(--gold)); transition: width 1s linear; }
 
-  .slot .slot-sprite { width: 38px; height: 38px; overflow: visible; display: block; }
+  .slot .slot-sprite { width: 30px; height: 30px; overflow: visible; display: block; }
   .slot .tower-limb { transform-box: fill-box; }
   .slot .launch-arm { transform-box: fill-box; transform-origin: bottom center; animation: launcherIdle 2.6s ease-in-out infinite; }
   @keyframes launcherIdle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(3deg); } }
@@ -633,7 +656,7 @@
   .slot-menu .buyqty-btn { font-size: 8px; padding: 4px 2px; border-radius: 4px; }
 
   .float { position: absolute; pointer-events: none; font-size: 11px; font-weight: 700; animation: floatUp2 0.8s ease-out forwards; white-space: nowrap; }
-  @keyframes floatUp2 { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-30px); } }
+  @keyframes floatUp2 { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-20px); } }
 
   .overlay {
     display: flex; position: fixed; inset: 0; background: rgba(5,5,8,0.85);
@@ -763,6 +786,7 @@
     <div class="wave-banner" id="wave-banner">WAVE 1</div>
   </div>
 
+  <div class="ability-dock">
   <div class="ability-row" id="archer-ability-row">
     <button id="archer-ability-btn" class="btn" disabled>Hazel locked</button>
   </div>
@@ -783,8 +807,9 @@
     <button id="warcry-ability-btn" class="btn">Use Chieftain's Warcry</button>
   </div>
 
-  <div class="ability-row">
+  <div class="ability-row" id="gideon-ability-row">
     <button id="ability-btn" class="btn" disabled>Gideon locked</button>
+  </div>
   </div>
 
   <div class="buildings-label">Buildings</div>
@@ -900,7 +925,7 @@
     craftedEquip: {},
     wave: 1, hearthHp: 100, hearthMaxHp: 100, tutorialSeen: false,
     waveEnemiesTotal: 10, waveEnemiesSpawned: 0,
-    slots: SLOT_PERCENTS.map(function(p, idx) { return { percent: p, side: idx % 2 === 0 ? -36 : 36, occupant: null }; }),
+    slots: SLOT_PERCENTS.map(function(p, idx) { return { percent: p, side: idx % 2 === 0 ? -48 : 48, occupant: null }; }),
     demons: [],
     upgrades: {},
     stats: { bestWave: 1, totalKills: 0, bossesKilled: 0, gamesOver: 0, offlineWavesCleared: 0 },
@@ -1208,7 +1233,7 @@
     p.textContent = text;
     p.style.color = color;
     p.style.left = '50%';
-    p.style.top = '0';
+    p.style.top = '86px';
     p.style.transform = 'translateX(-50%)';
     el.style.position = el.style.position || 'relative';
     el.appendChild(p);
@@ -1847,6 +1872,11 @@
     SFX.heroRecruit();
   }
 
+  function compactAbilityButton(button, icon, ability, unlocked, readyAt, now) {
+    var coolingDown = unlocked && now < readyAt;
+    button.innerHTML = '<span class="hero-ability-icon">' + icon + '</span><span class="hero-ability-label' + (unlocked && !coolingDown ? ' ready' : '') + '">' + (!unlocked ? 'Locked' : coolingDown ? Math.ceil((readyAt - now) / 1000) + 's' : ability) + '</span>';
+  }
+
   function updateAbilityBtn() {
     var now = simTimeMs;
     if (!state.heroUnlocked) { abilityBtn.disabled = true; abilityBtn.textContent = 'Gideon locked'; }
@@ -1904,6 +1934,11 @@
         warcryAbilityBtn.textContent = "Use Chieftain's Warcry";
       }
     }
+    compactAbilityButton(abilityBtn, '🪓', 'Pastries', state.heroUnlocked, state.abilityReadyAt, now);
+    compactAbilityButton(archerAbilityBtn, '🏹', 'Volley', state.archerUnlocked, state.archerAbilityReadyAt, now);
+    compactAbilityButton(frostAbilityBtn, '❄️', 'Freeze', state.frostUnlocked, state.frostAbilityReadyAt, now);
+    compactAbilityButton(dwarfAbilityBtn, '🧨', 'Charge', state.dwarfUnlocked, state.dwarfAbilityReadyAt, now);
+    compactAbilityButton(warlockAbilityBtn, '🔥', 'Wildfire', state.warlockUnlocked, state.warlockAbilityReadyAt, now);
   }
   abilityBtn.addEventListener('click', function() {
     if (simTimeMs < state.abilityReadyAt) return;
