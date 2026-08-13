@@ -100,7 +100,7 @@
   .battlefield {
     position: relative;
     margin: 18px 16px 0;
-    height: 200px;
+    height: 430px;
     border-radius: var(--radius-lg);
     background:
       radial-gradient(ellipse at 8% 50%, rgba(255,182,39,0.16), transparent 45%),
@@ -157,17 +157,41 @@
     0% { opacity: 0; transform: translateY(0) translateX(0); }
     12% { opacity: 0.75; }
     88% { opacity: 0.35; }
-    100% { opacity: 0; transform: translateY(-210px) translateX(var(--dx, 14px)); }
+    100% { opacity: 0; transform: translateY(-440px) translateX(var(--dx, 14px)); }
   }
-  .path-line-track { position: absolute; left: 3%; right: 3%; top: 50%; height: 10px; }
-  .path-seg {
-    position: absolute; top: 0; height: 10px; border-radius: 5px;
-    background: linear-gradient(90deg, rgba(202,160,106,0.5), rgba(90,70,45,0.4));
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.4);
-    transform: translateY(-50%);
+  .path-line-track { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .path-line-track svg { position:absolute; inset:0; width:100%; height:100%; display:block; filter: drop-shadow(0 10px 14px rgba(0,0,0,0.35)); }
+  .battlefield::before {
+    content:''; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(255,255,255,0.05) 0 2px, transparent 3px),
+      radial-gradient(circle at 72% 72%, rgba(255,255,255,0.035) 0 2px, transparent 3px),
+      linear-gradient(180deg, rgba(255,255,255,0.025), transparent 35%, rgba(0,0,0,0.18));
+    background-size: 170px 150px, 230px 180px, auto;
   }
+  .world-prop { position:absolute; z-index:2; pointer-events:none; user-select:none; filter: drop-shadow(0 6px 4px rgba(0,0,0,0.45)); opacity:.9; }
+
+  /* ---------- 2.5D map-zone scenery ---------- */
+  .zone-sprite-layer { position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+  .zone-sprite { position:absolute; transform:translate(-50%,-50%); transform-origin:50% 85%; opacity:.96; filter:drop-shadow(0 9px 5px rgba(0,0,0,.55)); animation:zonePropFloat 5s ease-in-out infinite; }
+  .zone-sprite svg { display:block; overflow:visible; }
+  .zone-sprite .zglow { animation:zoneGlow 2.6s ease-in-out infinite; transform-origin:center; }
+  .zone-sprite:nth-child(2n) { animation-delay:-2.2s; }
+  .zone-sprite:nth-child(3n) { animation-delay:-3.4s; }
+  @keyframes zonePropFloat { 0%,100%{ transform:translate(-50%,-50%) translateY(0); } 50%{ transform:translate(-50%,-50%) translateY(-2px); } }
+  @keyframes zoneGlow { 0%,100%{ opacity:.65; } 50%{ opacity:1; } }
+  .map-ashen .zone-sprite svg { filter:saturate(1.15) drop-shadow(0 0 5px rgba(255,74,32,.18)); }
+  .map-bone .zone-sprite svg { filter:saturate(.88) sepia(.12) drop-shadow(0 0 4px rgba(216,201,168,.12)); }
+  .map-molten .zone-sprite svg { filter:saturate(1.3) drop-shadow(0 0 7px rgba(255,91,20,.28)); }
+  .map-void .zone-sprite svg { filter:saturate(1.35) drop-shadow(0 0 8px rgba(168,85,247,.32)); }
+  .map-obsidian .zone-sprite svg { filter:saturate(1.05) drop-shadow(0 0 7px rgba(125,196,255,.28)); }
+  .world-prop svg { display:block; overflow:visible; }
+  .world-prop.rock { opacity:.9; }
+  .world-prop.tree { opacity:.85; }
+  .hearth-icon svg { display:block; overflow:visible; }
   .hearth-icon {
-    position: absolute; left: 2%; top: 50%; transform: translate(-10%, -50%); font-size: 30px;
+    z-index: 4;
+    position: absolute; left: 3%; top: 50%; transform: translate(-10%, -50%); font-size: 54px; z-index: 7;
     filter: drop-shadow(0 0 10px rgba(255,182,39,0.6));
     animation: hearthPulse 2.4s ease-in-out infinite;
   }
@@ -176,8 +200,9 @@
     50% { filter: drop-shadow(0 0 16px rgba(255,182,39,0.85)); }
   }
   .hell-portal {
-    position: absolute; right: 2%; top: 50%; transform: translate(10%, -50%);
-    width: 34px; height: 34px; cursor: pointer; z-index: 5;
+    z-index: 4;
+    position: absolute; right: 3%; top: 50%; transform: translate(10%, -50%);
+    width: 58px; height: 58px; cursor: pointer; z-index: 7;
   }
   .portal-ring {
     position: absolute; inset: 0; border-radius: 50%;
@@ -186,7 +211,7 @@
     box-shadow: 0 0 12px rgba(255,90,61,0.6);
   }
   .portal-core {
-    position: absolute; inset: 7px; border-radius: 50%;
+    position: absolute; inset: 11px; border-radius: 50%;
     background: radial-gradient(circle, #2a0a10, #5c1414 60%, #1a0505);
     animation: portalPulse 1.8s ease-in-out infinite;
   }
@@ -268,17 +293,32 @@
   .slot-connector { position: absolute; width: 1px; border-left: 1px dashed rgba(138,141,153,0.3); pointer-events: none; transition: top 0.6s ease; }
 
   .slot {
-    position: absolute; top: 50%; transform: translate(-50%, -50%);
-    width: 34px; height: 34px; border-radius: 8px;
-    background: var(--bg-panel); border: 1px dashed var(--steel);
+    position: absolute; top: 50%; z-index: 7; transform: translate(-50%, -50%);
+    width: 58px; height: 58px; border-radius: 10px;
+    background: rgba(18,20,24,.28); border: 1px dashed rgba(138,141,153,.28);
     display: flex; align-items: center; justify-content: center;
     font-size: 17px; cursor: pointer;
-    transition: border-color 0.15s, box-shadow 0.15s, top 0.6s ease;
+    transition: border-color 0.15s, box-shadow 0.15s, top 0.6s ease, transform .18s ease;
+    isolation: isolate;
   }
-  .slot:hover { border-color: var(--ash-dim); }
-  .slot.filled { border-style: solid; border-color: var(--gold); box-shadow: 0 0 8px rgba(255,182,39,0.35); }
+  .slot::before {
+    content: ''; position: absolute; left: 50%; bottom: 2px; width: 76%; height: 13px;
+    transform: translateX(-50%) perspective(30px) rotateX(58deg); border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(0,0,0,.62), rgba(0,0,0,.22) 48%, transparent 74%);
+    filter: blur(1.5px); z-index: -2; pointer-events:none;
+  }
+  .slot::after {
+    content: ''; position: absolute; inset: 8% 14% 18%; border-radius: 45%; pointer-events:none;
+    background: linear-gradient(135deg, rgba(255,255,255,.16), transparent 34%, rgba(0,0,0,.18) 78%, rgba(0,0,0,.3));
+    mix-blend-mode: screen; opacity: .7; z-index: 3;
+  }
+  .slot:hover { border-color: var(--ash-dim); transform: translate(-50%, -52%) scale(1.03); }
+  .slot.filled { border-style: solid; border-color: rgba(255,182,39,.72); background: radial-gradient(circle at 50% 35%, rgba(255,182,39,.10), rgba(18,20,24,.18) 65%); box-shadow: 0 0 12px rgba(255,182,39,0.28), inset 0 1px 0 rgba(255,255,255,.08); }
   .slot.firing { box-shadow: 0 0 0 4px rgba(255,182,39,0.5), 0 0 14px rgba(255,182,39,0.7); }
-  .slot .hp-mini { position: absolute; bottom: -6px; left: 2px; right: 2px; height: 3px; background: var(--steel); border-radius: 2px; overflow: hidden; }
+  .slot .slot-sprite { width: 54px; height: 54px; overflow: visible; display: block; position: relative; z-index: 2; filter: saturate(1.12) contrast(1.08) drop-shadow(0 3px 2px rgba(0,0,0,.55)) drop-shadow(0 0 2px rgba(255,255,255,.12)); transform-origin: 50% 82%; }
+  .slot.filled .slot-sprite { animation: buildingBreath 2.8s ease-in-out infinite; }
+  @keyframes buildingBreath { 0%,100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-1px) scaleY(1.015); } }
+  .slot .hp-mini { position: absolute; bottom: -6px; left: 2px; right: 2px; height: 3px; background: var(--steel); border-radius: 2px; overflow: hidden; z-index: 8; }
   .slot .hp-mini-fill { height: 100%; background: var(--green); width: 100%; }
   .slot .tower-lvl-badge {
     position: absolute; top: -6px; right: -6px; width: 15px; height: 15px; border-radius: 50%;
@@ -290,14 +330,40 @@
   .slot.repair-lunge-right { animation: repairLungeRight 0.6s ease-in-out; z-index: 5; }
   .slot.repair-lunge-left { animation: repairLungeLeft 0.6s ease-in-out; z-index: 5; }
 
+  /* 2.5D building lighting: each structure gets a distinct warm/cool rim and pedestal glow. */
+  .slot.filled.tower-log::after,.slot.filled.tower-sap::after { background: linear-gradient(135deg,rgba(255,218,150,.24),transparent 35%,rgba(45,25,10,.24)); }
+  .slot.filled.tower-archer::after { background: linear-gradient(135deg,rgba(255,240,190,.26),transparent 35%,rgba(30,55,35,.28)); }
+  .slot.filled.tower-frost::after,.slot.filled.tower-trap::after { background: linear-gradient(135deg,rgba(220,250,255,.34),transparent 35%,rgba(35,80,120,.32)); }
+  .slot.filled.tower-cannon::after { background: linear-gradient(135deg,rgba(235,240,255,.25),transparent 34%,rgba(20,22,28,.35)); }
+  .slot.filled.tower-flame::after { background: linear-gradient(135deg,rgba(255,240,190,.32),transparent 30%,rgba(120,25,5,.32)); }
+  .slot.filled.tower-totem::after,.slot.filled.tower-barracks::after { background: linear-gradient(135deg,rgba(255,220,150,.22),transparent 34%,rgba(25,45,30,.30)); }
+  .slot.filled.tower-wall::after { background: linear-gradient(135deg,rgba(255,255,255,.20),transparent 35%,rgba(0,0,0,.30)); }
+  .slot.filled.tower-cannon,.slot.filled.tower-barracks { box-shadow: 0 0 14px rgba(160,170,190,.22), inset 0 1px 0 rgba(255,255,255,.10); }
+  .slot.filled.tower-frost,.slot.filled.tower-trap { box-shadow: 0 0 16px rgba(126,200,255,.26), inset 0 1px 0 rgba(255,255,255,.12); }
+  .slot.filled.tower-flame { box-shadow: 0 0 16px rgba(255,90,30,.28), inset 0 1px 0 rgba(255,255,255,.10); }
+
   .demon {
-    position: absolute; top: 50%; width: 26px; height: 26px;
+    --demon-scale: 1;
+    position: absolute; top: 50%; z-index: 5; width: 42px; height: 42px;
     transform: translate(-50%, -50%); transition: left 0.14s linear, top 0.14s linear;
     animation: demonBob 0.5s ease-in-out infinite;
     filter: drop-shadow(0 3px 3px rgba(0,0,0,0.5));
   }
   .demon svg { width: 100%; height: 100%; overflow: visible; display: block; }
-  @keyframes demonBob { 0%, 100% { margin-top: 0; } 50% { margin-top: -3px; } }
+  .demon::after {
+    content: ''; position: absolute; left: 50%; bottom: -3px; width: 72%; height: 12px;
+    transform: translateX(-50%); border-radius: 50%; pointer-events: none; z-index: -2;
+    background: radial-gradient(ellipse, rgba(0,0,0,.52) 0%, rgba(0,0,0,.28) 42%, transparent 74%);
+    filter: blur(2px);
+  }
+  .demon svg { filter: drop-shadow(0 1px 0 rgba(255,150,140,.14)); }
+  .demon:not(.flier)::before {
+    content: ''; position: absolute; inset: 4% 12% 10%; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(ellipse at 30% 18%, rgba(255,255,255,.16), transparent 28%),
+                linear-gradient(115deg, transparent 48%, rgba(0,0,0,.16) 78%, rgba(0,0,0,.28) 100%);
+    mix-blend-mode: screen; opacity: .7; z-index: 2;
+  }
+  @keyframes demonBob { 0%, 100% { margin-top: 0; transform: translate(-50%, -50%) scale(var(--demon-scale, 1)); } 50% { margin-top: -3px; transform: translate(-50%, calc(-50% - 1px)) scale(var(--demon-scale, 1.015)); } }
   .demon .limb { transform-box: fill-box; transform-origin: top center; }
   .demon .leg-l { animation: demonLegSwing 0.5s ease-in-out infinite; }
   .demon .leg-r { animation: demonLegSwing 0.5s ease-in-out infinite; animation-delay: -0.25s; }
@@ -309,12 +375,15 @@
   }
   .demon .dhp { position: absolute; top: -8px; left: 0; right: 0; height: 2px; background: var(--crimson); }
 
-  .demon.imp { transform: translate(-50%, -50%) scale(0.72); filter: hue-rotate(35deg) saturate(1.4) drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
+  .demon.imp { --demon-scale: .72; transform: translate(-50%, -50%) scale(var(--demon-scale)); filter: hue-rotate(35deg) saturate(1.4) drop-shadow(0 2px 2px rgba(0,0,0,0.5)); }
   .demon.imp .leg-l, .demon.imp .leg-r, .demon.imp .arm-l, .demon.imp .arm-r { animation-duration: 0.32s; }
-  .demon.armoredBrute { transform: translate(-50%, -50%) scale(1.35); filter: brightness(0.86) saturate(1.15) drop-shadow(0 3px 4px rgba(0,0,0,0.6)); }
+  .demon.armoredBrute { --demon-scale: 1.75; transform: translate(-50%, -50%) scale(var(--demon-scale)); filter: saturate(1.08) contrast(1.05) drop-shadow(0 5px 5px rgba(0,0,0,.72)); transform-origin: 50% 78%; }
+  .demon.armoredBrute::after { content: ''; position:absolute; left:50%; bottom:3%; width:70%; height:13%; transform:translateX(-50%); border-radius:50%; background:radial-gradient(ellipse,rgba(0,0,0,.42),transparent 70%); filter:blur(2px); z-index:-1; }
+  .demon.armoredBrute svg { overflow:visible; }
+  .demon.armoredBrute .leg-l, .demon.armoredBrute .leg-r, .demon.armoredBrute .arm-l, .demon.armoredBrute .arm-r { filter: drop-shadow(1px 2px 1px rgba(0,0,0,.55)); }
   .demon.armoredBrute .leg-l, .demon.armoredBrute .leg-r, .demon.armoredBrute .arm-l, .demon.armoredBrute .arm-r { animation-duration: 0.85s; }
   .demon.summoner {
-    transform: translate(-50%, -50%) scale(1.15); z-index: 5;
+    --demon-scale: 1.15; transform: translate(-50%, -50%) scale(var(--demon-scale)); z-index: 5;
     filter: hue-rotate(150deg) saturate(1.3) drop-shadow(0 0 10px rgba(168,85,247,0.75));
   }
   .demon.summoner::before {
@@ -323,8 +392,26 @@
     background: radial-gradient(ellipse, rgba(168,85,247,0.5), transparent 70%);
     animation: bossAura 1.6s ease-in-out infinite; z-index: -1;
   }
+  /* Treasure Demon — 2.5D rare-enemy treatment */
+  .demon.treasure {
+    --demon-scale: 1.55;
+    transform: translate(-50%, -50%) scale(var(--demon-scale));
+    z-index: 6;
+    filter: drop-shadow(0 4px 4px rgba(0,0,0,.65)) drop-shadow(0 0 9px rgba(255,182,39,.32));
+    transform-origin: 50% 78%;
+  }
+  .demon.treasure::before {
+    content: ''; position: absolute; left: 50%; top: 66%; width: 40px; height: 18px;
+    transform: translate(-50%, -50%); border-radius: 50%; pointer-events: none; z-index: -1;
+    background: radial-gradient(ellipse, rgba(255,182,39,.28), transparent 70%);
+    animation: treasureGlow 1.5s ease-in-out infinite;
+  }
+  .demon.treasure .limb { filter: drop-shadow(1px 2px 1px rgba(0,0,0,.5)); }
+  .demon.treasure .leg-l, .demon.treasure .leg-r,
+  .demon.treasure .arm-l, .demon.treasure .arm-r { animation-duration: .72s; }
+  @keyframes treasureGlow { 0%,100% { opacity:.45; transform:translate(-50%,-50%) scale(.92); } 50% { opacity:.9; transform:translate(-50%,-50%) scale(1.08); } }
   .demon.boss {
-    transform: translate(-50%, -50%) scale(2.2); z-index: 6;
+    --demon-scale: 2.2; transform: translate(-50%, -50%) scale(var(--demon-scale)); z-index: 6;
     filter: drop-shadow(0 0 16px rgba(255,80,40,0.75)) drop-shadow(0 4px 6px rgba(0,0,0,0.7));
   }
   .demon.boss::before {
@@ -334,26 +421,25 @@
     animation: bossAura 1.4s ease-in-out infinite; z-index: -1;
   }
   @keyframes bossAura { 0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 0.9; transform: translate(-50%, -50%) scale(1.25); } }
+  /* Boss palette follows the current Hell map so every ten-wave biome has its own lord. */
+  .demon.boss-ashen { filter: drop-shadow(0 0 16px rgba(255,80,40,.78)) drop-shadow(0 5px 7px rgba(0,0,0,.72)); }
+  .demon.boss-bone { filter: drop-shadow(0 0 16px rgba(216,201,168,.55)) drop-shadow(0 5px 7px rgba(0,0,0,.72)); }
+  .demon.boss-molten { filter: drop-shadow(0 0 18px rgba(255,90,20,.88)) drop-shadow(0 5px 7px rgba(0,0,0,.72)); }
+  .demon.boss-void { filter: drop-shadow(0 0 19px rgba(168,85,247,.88)) drop-shadow(0 5px 7px rgba(0,0,0,.75)); }
+  .demon.boss-obsidian { filter: drop-shadow(0 0 18px rgba(125,196,255,.72)) drop-shadow(0 5px 7px rgba(0,0,0,.75)); }
   .demon.boss .leg-l, .demon.boss .leg-r, .demon.boss .arm-l, .demon.boss .arm-r { animation-duration: 0.62s; }
 
   .demon.flier { margin-top: -20px; filter: hue-rotate(-15deg) drop-shadow(0 8px 5px rgba(0,0,0,0.4)); animation: demonBob 0.5s ease-in-out infinite, flierFloat 1.8s ease-in-out infinite; }
   @keyframes flierFloat { 0%, 100% { margin-top: -20px; } 50% { margin-top: -27px; } }
-  .demon.flier .wing-l { transform-box: fill-box; transform-origin: right center; animation: wingFlap 0.28s ease-in-out infinite; }
-  .demon.flier .wing-r { transform-box: fill-box; transform-origin: left center; animation: wingFlap 0.28s ease-in-out infinite reverse; }
-  @keyframes wingFlap { 0%, 100% { transform: scaleY(1) rotate(0deg); } 50% { transform: scaleY(0.5) rotate(12deg); } }
+  .demon.flier .wing-l-inner { transform-box: view-box; transform-origin: 10px 11px; animation: wingFlapInner 0.28s ease-in-out infinite; }
+  .demon.flier .wing-r-inner { transform-box: view-box; transform-origin: 16px 11px; animation: wingFlapInnerR 0.28s ease-in-out infinite; }
+  .demon.flier .wing-l-outer { transform-box: view-box; transform-origin: 4px 10px; animation: wingFlapOuter 0.28s ease-in-out infinite; animation-delay: 0.03s; }
+  .demon.flier .wing-r-outer { transform-box: view-box; transform-origin: 22px 10px; animation: wingFlapOuterR 0.28s ease-in-out infinite; animation-delay: 0.03s; }
+  @keyframes wingFlapInner { 0%, 100% { transform: scaleY(1) rotate(0deg); } 50% { transform: scaleY(0.82) rotate(9deg); } }
+  @keyframes wingFlapInnerR { 0%, 100% { transform: scaleY(1) rotate(0deg); } 50% { transform: scaleY(0.82) rotate(-9deg); } }
+  @keyframes wingFlapOuter { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(48deg); } }
+  @keyframes wingFlapOuterR { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-48deg); } }
 
-  .demon.treasure {
-    transform: translate(-50%, -50%) scale(1.5); z-index: 6;
-    filter: hue-rotate(45deg) saturate(1.6) brightness(1.15) drop-shadow(0 0 18px rgba(255,215,0,0.9)) drop-shadow(0 4px 6px rgba(0,0,0,0.7));
-  }
-  .demon.treasure::before {
-    content: ''; position: absolute; left: 50%; top: 62%; width: 30px; height: 11px;
-    transform: translate(-50%, -50%); border-radius: 50%;
-    background: radial-gradient(ellipse, rgba(255,215,0,0.6), transparent 70%);
-    animation: treasureAura 1s ease-in-out infinite; z-index: -1;
-  }
-  @keyframes treasureAura { 0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); } 50% { opacity: 1; transform: translate(-50%, -50%) scale(1.35); } }
-  .demon.treasure .leg-l, .demon.treasure .leg-r, .demon.treasure .arm-l, .demon.treasure .arm-r { animation-duration: 1.4s; }
 
   .log-projectile {
     position: absolute; top: 50%; transform: translate(-50%, -50%);
@@ -422,7 +508,7 @@
   .building-btn .bprog { height: 4px; border-radius: 2px; background: var(--steel); overflow: hidden; margin-top: 6px; }
   .building-btn .bprog div { height: 100%; width: 0%; background: linear-gradient(90deg, var(--ember), var(--gold)); transition: width 1s linear; }
 
-  .slot .slot-sprite { width: 24px; height: 24px; overflow: visible; display: block; }
+  .slot .slot-sprite { width: 38px; height: 38px; overflow: visible; display: block; }
   .slot .tower-limb { transform-box: fill-box; }
   .slot .launch-arm { transform-box: fill-box; transform-origin: bottom center; animation: launcherIdle 2.6s ease-in-out infinite; }
   @keyframes launcherIdle { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(3deg); } }
@@ -437,7 +523,7 @@
   .slot .bow-arm { animation: bowSway 2.4s ease-in-out infinite; }
   @keyframes bowSway { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-0.6px); } }
   .slot.firing .bow-arm, .slot.firing .bow-string { animation: bowRelease 0.22s ease-out; }
-  .slot.firing .frost-crystal { animation: frostCast 0.3s ease-out; }
+  .slot.firing .frost-crystal { transform-box: view-box; transform-origin: 14px 11px; animation: frostCast 0.3s ease-out; }
   .slot .cannon-barrel { transform-box: fill-box; transform-origin: left center; }
   .slot.firing .cannon-barrel { animation: cannonKick 0.3s ease-out; }
   @keyframes cannonKick { 0% { transform: translateX(0); } 20% { transform: translateX(-3px); } 100% { transform: translateX(0); } }
@@ -659,8 +745,15 @@
       <button id="speed-btn" class="icon-btn" title="2x Speed">1x</button>
     </div>
     <div id="battlefield-embers"></div>
+    <div class="zone-sprite-layer" id="zone-sprite-layer" aria-hidden="true"></div>
+    <div class="world-prop tree" style="left:12%;top:8%;"><svg width="34" height="44" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="46" rx="10" ry="3" fill="#000" opacity="0.25"/><rect x="18" y="34" width="4" height="10" fill="#5b4630"/><rect x="18" y="34" width="2" height="10" fill="#7a5c3a"/><polygon points="20,4 32,26 8,26" fill="#2f5a3a"/><polygon points="20,4 20,26 8,26" fill="#3a6d47" opacity="0.55"/><polygon points="20,4 32,26 20,26" fill="#234a2c" opacity="0.55"/><polygon points="20,14 30,32 10,32" fill="#3a6d47"/><polygon points="20,14 20,32 10,32" fill="#457f54" opacity="0.55"/><polygon points="20,14 30,32 20,32" fill="#2a5636" opacity="0.55"/><polygon points="20,22 28,38 12,38" fill="#457f54"/><polygon points="20,22 20,38 12,38" fill="#549362" opacity="0.55"/><polygon points="20,22 28,38 20,38" fill="#345f3f" opacity="0.55"/></svg></div>
+    <div class="world-prop tree" style="left:78%;top:10%;"><svg width="34" height="44" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="46" rx="10" ry="3" fill="#000" opacity="0.25"/><rect x="18" y="34" width="4" height="10" fill="#5b4630"/><rect x="18" y="34" width="2" height="10" fill="#7a5c3a"/><polygon points="20,4 32,26 8,26" fill="#2f5a3a"/><polygon points="20,4 20,26 8,26" fill="#3a6d47" opacity="0.55"/><polygon points="20,4 32,26 20,26" fill="#234a2c" opacity="0.55"/><polygon points="20,14 30,32 10,32" fill="#3a6d47"/><polygon points="20,14 20,32 10,32" fill="#457f54" opacity="0.55"/><polygon points="20,14 30,32 20,32" fill="#2a5636" opacity="0.55"/><polygon points="20,22 28,38 12,38" fill="#457f54"/><polygon points="20,22 20,38 12,38" fill="#549362" opacity="0.55"/><polygon points="20,22 28,38 20,38" fill="#345f3f" opacity="0.55"/></svg></div>
+    <div class="world-prop tree" style="left:87%;top:78%;"><svg width="34" height="44" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="46" rx="10" ry="3" fill="#000" opacity="0.25"/><rect x="18" y="34" width="4" height="10" fill="#5b4630"/><rect x="18" y="34" width="2" height="10" fill="#7a5c3a"/><polygon points="20,4 32,26 8,26" fill="#2f5a3a"/><polygon points="20,4 20,26 8,26" fill="#3a6d47" opacity="0.55"/><polygon points="20,4 32,26 20,26" fill="#234a2c" opacity="0.55"/><polygon points="20,14 30,32 10,32" fill="#3a6d47"/><polygon points="20,14 20,32 10,32" fill="#457f54" opacity="0.55"/><polygon points="20,14 30,32 20,32" fill="#2a5636" opacity="0.55"/><polygon points="20,22 28,38 12,38" fill="#457f54"/><polygon points="20,22 20,38 12,38" fill="#549362" opacity="0.55"/><polygon points="20,22 28,38 20,38" fill="#345f3f" opacity="0.55"/></svg></div>
+    <div class="world-prop rock" style="left:28%;top:76%;"><svg width="30" height="30" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="33" rx="14" ry="4" fill="#000" opacity="0.25"/><polygon points="20,10 30,18 26,30 14,30 10,18" fill="#7a7772"/><polygon points="20,10 10,18 14,30 20,26" fill="#5c5954"/><polygon points="20,10 30,18 26,30 20,26" fill="#8f8c86"/><polygon points="10,18 14,30 20,26 16,20" fill="#4a4844" opacity="0.6"/><polygon points="30,24 35,28 32,34 26,32" fill="#6b6864"/><polygon points="30,24 26,32 30,33" fill="#4a4844"/></svg></div>
+    <div class="world-prop rock" style="left:61%;top:14%;"><svg width="30" height="30" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="33" rx="14" ry="4" fill="#000" opacity="0.25"/><polygon points="20,10 30,18 26,30 14,30 10,18" fill="#7a7772"/><polygon points="20,10 10,18 14,30 20,26" fill="#5c5954"/><polygon points="20,10 30,18 26,30 20,26" fill="#8f8c86"/><polygon points="10,18 14,30 20,26 16,20" fill="#4a4844" opacity="0.6"/><polygon points="30,24 35,28 32,34 26,32" fill="#6b6864"/><polygon points="30,24 26,32 30,33" fill="#4a4844"/></svg></div>
+    <div class="world-prop rock" style="left:45%;top:84%;"><svg width="30" height="30" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><ellipse cx="20" cy="33" rx="14" ry="4" fill="#000" opacity="0.25"/><polygon points="20,10 30,18 26,30 14,30 10,18" fill="#7a7772"/><polygon points="20,10 10,18 14,30 20,26" fill="#5c5954"/><polygon points="20,10 30,18 26,30 20,26" fill="#8f8c86"/><polygon points="10,18 14,30 20,26 16,20" fill="#4a4844" opacity="0.6"/><polygon points="30,24 35,28 32,34 26,32" fill="#6b6864"/><polygon points="30,24 26,32 30,33" fill="#4a4844"/></svg></div>
     <div class="path-line-track" id="path-line-track"></div>
-    <div class="hearth-icon">🏡</div>
+    <div class="hearth-icon"><svg width="54" height="54" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg"><ellipse cx="28" cy="50" rx="20" ry="4" fill="#000" opacity="0.3"/><polygon points="10,20 10,42 28,48 28,26" fill="#6b5335"/><polygon points="28,26 28,48 46,42 46,20" fill="#4a3a24"/><polygon points="8,20 28,12 48,20 28,28" fill="#8b5a2b"/><polygon points="8,20 28,28 28,12" fill="#a5713a" opacity="0.5"/><rect x="36" y="6" width="5" height="12" fill="#5b4630"/><path d="M23,48 L23,34 Q23,30 28,30 Q33,30 33,34 L33,48 Z" fill="#2a1810"/><ellipse cx="28" cy="42" rx="4" ry="6" fill="#ffb627"/><ellipse cx="28" cy="42" rx="2.2" ry="4" fill="#ffe89a"/></svg></div>
     <div class="hell-portal" id="hell-portal" title="Venture into Hell">
       <div class="portal-ring"></div>
       <div class="portal-core"></div>
@@ -805,7 +898,7 @@
     slots: SLOT_PERCENTS.map(function(p, idx) { return { percent: p, side: idx % 2 === 0 ? -36 : 36, occupant: null }; }),
     demons: [],
     upgrades: {},
-    stats: { bestWave: 1, totalKills: 0, bossesKilled: 0, gamesOver: 0 },
+    stats: { bestWave: 1, totalKills: 0, bossesKilled: 0, gamesOver: 0, offlineWavesCleared: 0 },
     killsByType: {},
     discovered: {}
   };
@@ -980,6 +1073,26 @@
       stone: 0.25 * buildingMult('mine') * prestigeResourceMult()
     };
   }
+  // Rough offline estimate of how many waves an unattended garrison would clear, and the
+  // gold those kills would have dropped. Deliberately conservative (an "efficiency" cut
+  // below live play) so returning to play the game stays the stronger option.
+  function simulateOfflineWaves(startWave, awaySec) {
+    var efficiency = grandLvl('infiniteAuto') ? 0.85 : 0.45;
+    var waveCap = grandLvl('infiniteAuto') ? 120 : 60; // don't let one offline stretch outpace real progress
+    var wave = startWave;
+    var timeLeftMs = awaySec * 1000;
+    var gold = 0, wavesCleared = 0;
+    while (wavesCleared < waveCap) {
+      var enemies = waveEnemyTotal(wave);
+      var waveDurationMs = enemies * spawnIntervalForWave(wave) + WAVE_BREATHER_MS;
+      if (waveDurationMs > timeLeftMs) break;
+      timeLeftMs -= waveDurationMs;
+      gold += Math.round(enemies * (2 + wave * 1.2) * prestigeResourceMult() * achievementGoldMult() * sovereignGoldMult() * efficiency);
+      wave++;
+      wavesCleared++;
+    }
+    return { newWave: wave, wavesCleared: wavesCleared, gold: gold };
+  }
   setInterval(function() {
     var r = passiveRates();
     state.wood += r.wood * 2;
@@ -1129,69 +1242,134 @@
   var OCCUPANT_SVG = {
     cannonTower:
       '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<rect x="6" y="19" width="16" height="4.5" rx="1" fill="#4a4640"/>' +
-        '<circle cx="9" cy="24" r="2.6" fill="#2b2825"/>' +
-        '<circle cx="9" cy="24" r="1" fill="#5a5f66"/>' +
-        '<circle cx="19" cy="24" r="2.6" fill="#2b2825"/>' +
-        '<circle cx="19" cy="24" r="1" fill="#5a5f66"/>' +
-        '<circle cx="9" cy="14" r="4.2" fill="#3a3d42"/>' +
-        '<rect class="tower-limb cannon-barrel" x="9" y="11.5" width="15" height="5" rx="2.2" fill="#5a5f66"/>' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#5a5f66"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#3a3d42"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#26282c"/>' +
+        '<ellipse cx="14" cy="15" rx="7" ry="3.2" fill="#6b7078"/>' +
+        '<path d="M7,15 L7,18.5 Q7,21 14,21 Q21,21 21,18.5 L21,15 Q21,17.5 14,17.5 Q7,17.5 7,15 Z" fill="#3a3d42"/>' +
+        '<rect class="tower-limb cannon-barrel" x="13" y="9" width="15" height="5" rx="1.6" fill="#5a5f66"/>' +
+        '<rect x="13" y="9" width="15" height="1.6" rx="0.8" fill="#7c828a" opacity="0.8"/>' +
+        '<ellipse cx="27" cy="11.5" rx="1.2" ry="2.6" fill="#242527"/>' +
       '</svg>',
     frostSpire:
       '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<polygon points="7,26 14,8 21,26" fill="#3a4a6d" opacity="0.85"/>' +
-        '<polygon points="10,26 14,14 18,26" fill="#2a3550"/>' +
-        '<polygon class="tower-limb frost-crystal icon-glow" points="14,3 17,10 14,14 11,10" fill="#bfe8ff"/>' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#3a4a6d"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#232d45"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#182035"/>' +
+        '<g class="tower-limb frost-crystal icon-glow">' +
+          '<polygon points="14,2 19,14 14,20 9,14" fill="#bfe8ff"/>' +
+          '<polygon points="14,2 19,14 14,15.5" fill="#d9f3ff"/>' +
+          '<polygon points="14,2 9,14 14,15.5" fill="#8fc4e8"/>' +
+        '</g>' +
       '</svg>',
     archerTower:
       '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<polygon points="6,26 10,10 18,10 22,26" fill="#5b4630"/>' +
-        '<rect x="8" y="9" width="12" height="3" rx="1" fill="#3a2c1a"/>' +
-        '<circle cx="14" cy="5.4" r="2.6" fill="#e0b088"/>' +
-        '<rect x="12.4" y="7" width="3.2" height="3.6" rx="1" fill="#3a6d47"/>' +
-        '<path class="tower-limb bow-arm" d="M19 3 Q22.5 6 19 9.5" fill="none" stroke="#8b5a2b" stroke-width="1.3"/>' +
-        '<line class="tower-limb bow-string" x1="19" y1="3" x2="19" y2="9.5" stroke="#e3e4ea" stroke-width="0.6"/>' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#8a6a44" stroke="#c9a06a" stroke-width="0.4"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#6b5335" stroke="#8a6a44" stroke-width="0.3"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#4a3a24" stroke="#6b5335" stroke-width="0.3"/>' +
+        '<polygon points="8,7 8,17 14,19.5 14,9.5" fill="#8b6a3f" stroke="#caa06a" stroke-width="0.4"/>' +
+        '<polygon points="14,9.5 14,19.5 20,17 20,7" fill="#6b5230" stroke="#8b6a3f" stroke-width="0.4"/>' +
+        '<polygon points="8,7 14,4 20,7 14,9.5" fill="#c9973f" stroke="#e8c078" stroke-width="0.4"/>' +
+        '<circle cx="14" cy="3" r="2.1" fill="#e0b088"/>' +
+        '<path class="tower-limb bow-arm" d="M18.5,0.5 Q22,3.3 18.5,6.2" fill="none" stroke="#caa06a" stroke-width="1.4"/>' +
+        '<line class="tower-limb bow-string" x1="18.5" y1="0.5" x2="18.5" y2="6.2" stroke="#f5f0e0" stroke-width="0.7"/>' +
       '</svg>',
     logLauncher:
       '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<polygon points="5,26 14,11 23,26" fill="#5b4630"/>' +
-        '<rect x="4" y="24" width="20" height="2.4" rx="1" fill="#3a2c1a"/>' +
-        '<circle cx="14" cy="11" r="1.7" fill="#3a2c1a"/>' +
-        '<rect class="tower-limb launch-arm" x="12.7" y="2" width="2.2" height="10" rx="1" fill="#caa06a"/>' +
-        '<ellipse cx="13.8" cy="2" rx="2.3" ry="1.4" fill="#3a2c1a"/>' +
-        '<rect x="12.4" y="0.6" width="2.8" height="2" rx="0.6" fill="#8b5a2b"/>' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#6b5335"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#4a3a24"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#332818"/>' +
+        '<polygon points="9,17 14,10 19,17 14,20" fill="#5b4630"/>' +
+        '<polygon points="9,17 14,10 14,20" fill="#7a5c3a" opacity="0.5"/>' +
+        '<circle cx="14" cy="10" r="1.6" fill="#2a1f12"/>' +
+        '<rect class="tower-limb launch-arm" x="12.9" y="1.5" width="2.2" height="10" rx="1" fill="#caa06a"/>' +
+        '<ellipse cx="14" cy="1.5" rx="2.3" ry="1.4" fill="#3a2c1a"/>' +
+        '<rect x="12.6" y="0.2" width="2.8" height="2" rx="0.6" fill="#8b5a2b"/>' +
       '</svg>',
     sapPit:
       '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<rect x="12.5" y="16" width="3" height="9" rx="1" fill="#5b4630"/>' +
-        '<polygon points="14,4 21,17 7,17" fill="#2f5a3a"/>' +
-        '<polygon points="14,9 20,19 8,19" fill="#3a6d47"/>' +
-        '<polygon points="14,13 19,22 9,22" fill="#457f54"/>' +
-        '<ellipse class="sap-drop" cx="10" cy="21" rx="1.3" ry="1.6" fill="#c9832f"/>' +
-        '<ellipse class="sap-drop d2" cx="17" cy="19" rx="1.1" ry="1.4" fill="#c9832f"/>' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#4a6b52"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#2f4a37"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#213627"/>' +
+        '<rect x="12.5" y="14" width="3" height="8" rx="1" fill="#5b4630"/>' +
+        '<polygon points="14,2 21,15 7,15" fill="#2f5a3a"/>' +
+        '<polygon points="14,7 20,17 8,17" fill="#3a6d47"/>' +
+        '<polygon points="14,11 19,20 9,20" fill="#457f54"/>' +
+        '<ellipse class="sap-drop" cx="10" cy="19" rx="1.3" ry="1.6" fill="#c9832f"/>' +
+        '<ellipse class="sap-drop d2" cx="17" cy="17" rx="1.1" ry="1.4" fill="#c9832f"/>' +
       '</svg>',
     wall:
       '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<rect x="4" y="6" width="20" height="18" rx="2" fill="#6b6a66"/>' +
-        '<rect x="4" y="6" width="20" height="18" rx="2" fill="none" stroke="#4a4946" stroke-width="1"/>' +
-        '<g stroke="#4a4946" stroke-width="1">' +
-          '<line x1="4" y1="12" x2="24" y2="12"/><line x1="4" y1="18" x2="24" y2="18"/>' +
-          '<line x1="10" y1="6" x2="10" y2="12"/><line x1="18" y1="6" x2="18" y2="12"/>' +
-          '<line x1="14" y1="12" x2="14" y2="18"/><line x1="8" y1="18" x2="8" y2="24"/><line x1="20" y1="18" x2="20" y2="24"/>' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#8a8985"/>' +
+        '<polygon points="4,6 4,20 14,24.5 14,10.5" fill="#6b6a66"/>' +
+        '<polygon points="14,10.5 14,24.5 24,20 24,6" fill="#4a4946"/>' +
+        '<polygon points="4,6 14,1.5 24,6 14,10.5" fill="#8a8985"/>' +
+        '<g stroke="#4a4946" stroke-width="0.5" opacity="0.6">' +
+          '<line x1="4" y1="10" x2="14" y2="14.5"/><line x1="4" y1="14" x2="14" y2="18.5"/>' +
+          '<line x1="14" y1="14.5" x2="24" y2="10"/><line x1="14" y1="18.5" x2="24" y2="14"/>' +
         '</g>' +
+      '</svg>',
+    flamethrower:
+      '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#5a4a42"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#3a2f2a"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#261e1a"/>' +
+        '<ellipse cx="14" cy="15" rx="7" ry="3.2" fill="#6b4a3a"/>' +
+        '<path d="M7,15 L7,18.5 Q7,21 14,21 Q21,21 21,18.5 L21,15 Q21,17.5 14,17.5 Q7,17.5 7,15 Z" fill="#3a2a22"/>' +
+        '<rect class="tower-limb cannon-barrel" x="13" y="10.5" width="13" height="4.5" rx="1.6" fill="#8b3a1f"/>' +
+        '<rect x="13" y="10.5" width="13" height="1.4" rx="0.7" fill="#ff8c42" opacity="0.9"/>' +
+        '<ellipse class="icon-glow" cx="25.5" cy="12.7" rx="1.6" ry="2.2" fill="#ffb627"/>' +
+      '</svg>',
+    scavengerTotem:
+      '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#6b5335"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#4a3a24"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#332818"/>' +
+        '<rect x="12.3" y="6" width="3.4" height="14" rx="1" fill="#5b4630"/>' +
+        '<rect x="12.3" y="6" width="1.4" height="14" fill="#7a5c3a"/>' +
+        '<circle class="icon-glow" cx="14" cy="4.5" r="3.4" fill="#ffb627"/>' +
+        '<circle cx="14" cy="4.5" r="2" fill="#ffdb8a"/>' +
+        '<text x="14" y="6.2" font-size="3.4" text-anchor="middle" fill="#8b6a1f">$</text>' +
+      '</svg>',
+    permafrostTrap:
+      '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#6a8fbf"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#3a4a6d"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#2a3550"/>' +
+        '<polygon points="9,19 11,10 13,19" fill="#bfe8ff"/>' +
+        '<polygon points="13,20.5 15.5,8 18,20.5" fill="#d9f3ff"/>' +
+        '<polygon points="16,19 18.5,12 21,19" fill="#8fc4e8"/>' +
+      '</svg>',
+    barracksTower:
+      '<svg class="slot-sprite" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
+        '<polygon points="4,20 14,24.5 24,20 14,15.5" fill="#6b5335"/>' +
+        '<polygon points="4,20 14,24.5 14,27.5 4,24.5" fill="#4a3a24"/>' +
+        '<polygon points="14,24.5 24,20 24,24.5 14,27.5" fill="#332818"/>' +
+        '<polygon points="6,18 14,6 22,18" fill="#a5713a"/>' +
+        '<polygon points="6,18 14,6 14,18" fill="#8b5a2b" opacity="0.6"/>' +
+        '<polygon points="12,18 14,13 16,18" fill="#3a2c1a"/>' +
+        '<rect x="13.3" y="4" width="1.4" height="4" fill="#5b4630"/>' +
+        '<polygon points="13,3 16,4 13,5" fill="#c23b3b"/>' +
       '</svg>',
     grunt:
       '<svg class="slot-sprite troop-idle" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="14" cy="23.5" rx="8" ry="2.6" fill="#0a0a08" opacity="0.35"/>' +
         '<rect x="11" y="13" width="6" height="9" rx="2" fill="#3d4a3d"/>' +
+        '<rect x="11" y="13" width="3" height="9" rx="2" fill="#4d5c4d"/>' +
         '<circle cx="14" cy="8.5" r="3.6" fill="#caa87e"/>' +
-        '<ellipse cx="7.5" cy="16" rx="2.6" ry="4" fill="#6bdc8f" opacity="0.9"/>' +
-        '<ellipse cx="7.5" cy="16" rx="2.6" ry="4" fill="none" stroke="#3d4a3d" stroke-width="0.8"/>' +
+        '<circle cx="12.4" cy="8" r="1.4" fill="#b3946a"/>' +
+        '<polygon points="4.5,13 10.5,15.5 10.5,20.5 4.5,18" fill="#6bdc8f" opacity="0.9"/>' +
+        '<polygon points="4.5,13 10.5,15.5 10.5,17.5 4.5,15" fill="#84e8a3" opacity="0.9"/>' +
         '<rect x="18.5" y="12" width="1.8" height="9" rx="0.8" fill="#b9c2cc"/>' +
+        '<rect x="18.5" y="12" width="0.9" height="9" rx="0.4" fill="#e3e4ea"/>' +
       '</svg>',
     captain:
       '<svg class="slot-sprite troop-idle" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">' +
-        '<polygon points="10,12 18,12 20,23 8,23" fill="#8b2f1f" opacity="0.9"/>' +
+        '<ellipse cx="14" cy="23.5" rx="8" ry="2.6" fill="#0a0a08" opacity="0.35"/>' +
+        '<polygon points="9,12 18,12 20,23 8,23" fill="#8b2f1f" opacity="0.9"/>' +
+        '<polygon points="9,12 18,12 18,14.5 9,14.5" fill="#a5382a" opacity="0.9"/>' +
         '<rect x="11" y="12" width="6" height="9" rx="2" fill="#4a4640"/>' +
+        '<rect x="11" y="12" width="3" height="9" rx="2" fill="#5a5650"/>' +
         '<circle cx="14" cy="8" r="3.6" fill="#caa87e"/>' +
         '<polygon points="10.5,6 14,3 17.5,6" fill="#ffb627"/>' +
         '<rect x="19" y="9" width="1.8" height="13" rx="0.8" fill="#e3e4ea"/>' +
@@ -1210,7 +1388,10 @@
       return;
     }
     el.classList.add('filled');
+    el.classList.remove('tower-log','tower-sap','tower-archer','tower-frost','tower-cannon','tower-flame','tower-totem','tower-trap','tower-barracks','tower-wall','tower-grunt','tower-captain');
     var occ = slot.occupant;
+    var visualClass = ({logLauncher:'tower-log',sapPit:'tower-sap',archerTower:'tower-archer',frostSpire:'tower-frost',cannonTower:'tower-cannon',flamethrower:'tower-flame',scavengerTotem:'tower-totem',permafrostTrap:'tower-trap',barracksTower:'tower-barracks',wall:'tower-wall',grunt:'tower-grunt',captain:'tower-captain'})[occ.defId];
+    if (visualClass) el.classList.add(visualClass);
     if (OCCUPANT_SVG[occ.defId]) {
       el.insertAdjacentHTML('beforeend', OCCUPANT_SVG[occ.defId]);
     } else {
@@ -1722,7 +1903,7 @@
     if (simTimeMs < state.archerAbilityReadyAt) return;
     state.archerAbilityReadyAt = simTimeMs + 20000 * heroCooldownMult('archer');
     var volleyDmg = (8 + Math.round(state.wave * 0.6)) * heroPowerMult('archer');
-    state.demons.forEach(function(d) { d.hp -= volleyDmg * (d.armored ? 0.4 : 1); });
+    state.demons.forEach(function(d) { d.hp -= volleyDmg * (d.armored ? d.armorMult : 1); });
     spawnFloatAt(battlefield, "Hawk's Volley!", '#e3e4ea');
     SFX.ability();
   });
@@ -1949,76 +2130,238 @@
 
   var DEMON_SVG =
     '<svg viewBox="0 0 24 26" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect class="limb leg-l" x="8" y="17" width="3" height="7" rx="1.5" fill="#7a1f1f"/>' +
-      '<rect class="limb leg-r" x="13" y="17" width="3" height="7" rx="1.5" fill="#7a1f1f"/>' +
-      '<rect class="limb arm-l" x="5" y="11" width="2.5" height="6" rx="1.2" fill="#8b2424"/>' +
-      '<rect class="limb arm-r" x="16.5" y="11" width="2.5" height="6" rx="1.2" fill="#8b2424"/>' +
-      '<ellipse cx="12" cy="13.5" rx="6.4" ry="6" fill="#a52d2d"/>' +
-      '<ellipse cx="12" cy="16.5" rx="4.6" ry="2.6" fill="#7a1f1f" opacity="0.5"/>' +
-      '<circle cx="12" cy="6.6" r="4.3" fill="#a52d2d"/>' +
-      '<polygon points="8.3,4.2 6.2,0.8 9.4,3" fill="#3a1010"/>' +
-      '<polygon points="15.7,4.2 17.8,0.8 14.6,3" fill="#3a1010"/>' +
-      '<circle cx="10" cy="6.8" r="1.15" fill="#d9b3ff"/>' +
-      '<circle cx="14" cy="6.8" r="1.15" fill="#d9b3ff"/>' +
-      '<circle cx="10" cy="6.8" r="1.9" fill="#a855f7" opacity="0.35"/>' +
-      '<circle cx="14" cy="6.8" r="1.9" fill="#a855f7" opacity="0.35"/>' +
+      '<defs>' +
+        '<radialGradient id="demonBody" cx="32%" cy="24%" r="78%"><stop offset="0" stop-color="#ef6565"/><stop offset="0.42" stop-color="#b93636"/><stop offset="0.78" stop-color="#7f2028"/><stop offset="1" stop-color="#431017"/></radialGradient>' +
+        '<radialGradient id="demonHead" cx="30%" cy="22%" r="80%"><stop offset="0" stop-color="#f27676"/><stop offset="0.45" stop-color="#b93636"/><stop offset="1" stop-color="#59151c"/></radialGradient>' +
+        '<linearGradient id="demonLimb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d84b4b"/><stop offset="0.55" stop-color="#8c252b"/><stop offset="1" stop-color="#431017"/></linearGradient>' +
+        '<linearGradient id="demonHorn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c4b4b"/><stop offset="0.35" stop-color="#2a0b10"/><stop offset="1" stop-color="#090306"/></linearGradient>' +
+        '<radialGradient id="demonEye"><stop offset="0" stop-color="#fff5c4"/><stop offset="0.35" stop-color="#d9b3ff"/><stop offset="1" stop-color="#8b36ff"/></radialGradient>' +
+        '<filter id="demonSoftShadow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="0.45"/></filter>' +
+      '</defs>' +
+      '<ellipse cx="12" cy="24.1" rx="6.2" ry="1.15" fill="#120508" opacity="0.55" filter="url(#demonSoftShadow)"/>' +
+      '<rect class="limb leg-l" x="8" y="17" width="3" height="7" rx="1.5" fill="url(#demonLimb)"/>' +
+      '<rect class="limb leg-r" x="13" y="17" width="3" height="7" rx="1.5" fill="url(#demonLimb)"/>' +
+      '<ellipse cx="8.9" cy="20.5" rx="1" ry="3.2" fill="#f06a67" opacity="0.24"/>' +
+      '<rect class="limb arm-l" x="5" y="11" width="2.5" height="6" rx="1.2" fill="url(#demonLimb)"/>' +
+      '<rect class="limb arm-r" x="16.5" y="11" width="2.5" height="6" rx="1.2" fill="url(#demonLimb)"/>' +
+      '<ellipse cx="12" cy="13.5" rx="6.4" ry="6" fill="url(#demonBody)" stroke="#4b1118" stroke-width="0.45"/>' +
+      '<ellipse cx="9.7" cy="11.3" rx="2.7" ry="3.5" fill="#ff8580" opacity="0.18" transform="rotate(20 9.7 11.3)"/>' +
+      '<ellipse cx="14.9" cy="15.2" rx="3.5" ry="3.2" fill="#26070d" opacity="0.28"/>' +
+      '<ellipse cx="12" cy="16.5" rx="4.6" ry="2.6" fill="#5a151d" opacity="0.58"/>' +
+      '<path d="M8.2 14.2 Q12 16.2 15.8 14.2" fill="none" stroke="#ef5d5b" stroke-width="0.5" opacity="0.42"/>' +
+      '<circle cx="12" cy="6.6" r="4.3" fill="url(#demonHead)" stroke="#4b1118" stroke-width="0.4"/>' +
+      '<ellipse cx="10.4" cy="5.5" rx="1.7" ry="1.3" fill="#ff9a94" opacity="0.24" transform="rotate(-20 10.4 5.5)"/>' +
+      '<ellipse cx="14.8" cy="8" rx="1.9" ry="1.5" fill="#2b080e" opacity="0.28"/>' +
+      '<polygon points="8.3,4.2 6.2,0.8 9.4,3" fill="url(#demonHorn)" stroke="#160509" stroke-width="0.3"/>' +
+      '<polygon points="15.7,4.2 17.8,0.8 14.6,3" fill="url(#demonHorn)" stroke="#160509" stroke-width="0.3"/>' +
+      '<path d="M7.1 1.8 L8.1 3" stroke="#a56a6a" stroke-width="0.35" opacity="0.5"/><path d="M16.9 1.8 L15.9 3" stroke="#a56a6a" stroke-width="0.35" opacity="0.5"/>' +
+      '<circle cx="10" cy="6.8" r="1.15" fill="url(#demonEye)"/><circle cx="14" cy="6.8" r="1.15" fill="url(#demonEye)"/>' +
+      '<circle cx="10" cy="6.8" r="0.35" fill="#18050a"/><circle cx="14" cy="6.8" r="0.35" fill="#18050a"/>' +
+      '<ellipse cx="12" cy="9.4" rx="1.8" ry="0.55" fill="#3a0b12" opacity="0.75"/>' +
     '</svg>';
 
-  var BOSS_SVG =
-    '<svg viewBox="0 0 24 26" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect class="limb leg-l" x="8" y="17" width="3.4" height="7" rx="1.5" fill="#4a0f0f"/>' +
-      '<rect class="limb leg-r" x="12.6" y="17" width="3.4" height="7" rx="1.5" fill="#4a0f0f"/>' +
-      '<rect class="limb arm-l" x="4.5" y="11" width="3" height="6.5" rx="1.2" fill="#5c1414"/>' +
-      '<rect class="limb arm-r" x="16.5" y="11" width="3" height="6.5" rx="1.2" fill="#5c1414"/>' +
-      '<ellipse cx="12" cy="13.5" rx="7" ry="6.4" fill="#6e1414"/>' +
-      '<ellipse cx="12" cy="16.5" rx="5" ry="2.8" fill="#4a0f0f" opacity="0.6"/>' +
-      '<circle cx="12" cy="6.6" r="4.6" fill="#6e1414"/>' +
-      '<polygon points="7.6,4 5,0 8.8,2.6" fill="#1a0505"/>' +
-      '<polygon points="16.4,4 19,0 15.2,2.6" fill="#1a0505"/>' +
-      '<polygon points="10.5,3 10,-0.5 12,1.8" fill="#1a0505"/>' +
-      '<polygon points="13.5,3 14,-0.5 12,1.8" fill="#1a0505"/>' +
-      '<circle cx="9.7" cy="6.8" r="1.3" fill="#ffcf6b"/>' +
-      '<circle cx="14.3" cy="6.8" r="1.3" fill="#ffcf6b"/>' +
-      '<circle cx="9.7" cy="6.8" r="2.2" fill="#ff6b35" opacity="0.4"/>' +
-      '<circle cx="14.3" cy="6.8" r="2.2" fill="#ff6b35" opacity="0.4"/>' +
+  var TREASURE_SVG =
+    '<svg viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<radialGradient id="treasureBody" cx="30%" cy="22%" r="82%"><stop offset="0" stop-color="#ff6b58"/><stop offset=".38" stop-color="#d52f35"/><stop offset=".75" stop-color="#861b28"/><stop offset="1" stop-color="#3b0b16"/></radialGradient>' +
+        '<radialGradient id="treasureHead" cx="28%" cy="20%" r="82%"><stop offset="0" stop-color="#ff8170"/><stop offset=".42" stop-color="#d9363e"/><stop offset="1" stop-color="#5a101b"/></radialGradient>' +
+        '<linearGradient id="treasureWing" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7f1725"/><stop offset=".55" stop-color="#3c0c18"/><stop offset="1" stop-color="#16050c"/></linearGradient>' +
+        '<linearGradient id="treasureHorn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d6b07a"/><stop offset=".35" stop-color="#5e412e"/><stop offset="1" stop-color="#170c0c"/></linearGradient>' +
+        '<linearGradient id="treasureBag" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b6a4d"/><stop offset=".5" stop-color="#493323"/><stop offset="1" stop-color="#1d1411"/></linearGradient>' +
+        '<linearGradient id="treasureGold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1a8"/><stop offset=".3" stop-color="#ffd34d"/><stop offset=".7" stop-color="#d99012"/><stop offset="1" stop-color="#70420b"/></linearGradient>' +
+        '<radialGradient id="treasureEye"><stop offset="0" stop-color="#fffbd0"/><stop offset=".3" stop-color="#ffe66a"/><stop offset="1" stop-color="#ff7a18"/></radialGradient>' +
+        '<filter id="treasureGlowFilter" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation=".7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
+      '</defs>' +
+      '<ellipse cx="21" cy="39" rx="14" ry="2.2" fill="#050306" opacity=".62"/>' +
+      '<path d="M15 14 Q7 7 3 10 Q6 2 15 7 Z" fill="url(#treasureWing)" stroke="#1a050b" stroke-width=".8"/>' +
+      '<path d="M27 14 Q35 7 39 10 Q36 2 27 7 Z" fill="url(#treasureWing)" stroke="#1a050b" stroke-width=".8"/>' +
+      '<path d="M15 9 Q8 6 4 10 M27 9 Q34 6 38 10" fill="none" stroke="#b83b46" stroke-opacity=".55" stroke-width=".55"/>' +
+      '<rect class="limb leg-l" x="13" y="27" width="4" height="10" rx="2" fill="url(#treasureBody)"/>' +
+      '<rect class="limb leg-r" x="24" y="27" width="4" height="10" rx="2" fill="url(#treasureBody)"/>' +
+      '<path d="M12 36 L16 38 L13 40 L9 38 Z M25 36 L29 38 L27 40 L23 38 Z" fill="#261014" stroke="#090407" stroke-width=".7"/>' +
+      '<rect class="limb arm-l" x="8" y="18" width="4" height="9" rx="2" fill="url(#treasureBody)" transform="rotate(18 10 18)"/>' +
+      '<rect class="limb arm-r" x="29" y="18" width="4" height="9" rx="2" fill="url(#treasureBody)" transform="rotate(-18 31 18)"/>' +
+      '<path d="M9 12 Q18 8 28 12 L31 27 Q21 33 10 27 Z" fill="url(#treasureBody)" stroke="#3a0a14" stroke-width=".8"/>' +
+      '<path d="M10 13 Q20 10 29 14 L29 19 Q20 17 10 19 Z" fill="#211719" opacity=".78"/>' +
+      '<path d="M10 18 Q19 20 30 17 L29 25 Q20 29 11 25 Z" fill="#5b1720" opacity=".65"/>' +
+      '<ellipse cx="12" cy="15" rx="4" ry="5" fill="#ff9a83" opacity=".13"/>' +
+      '<path d="M27 18 Q36 17 38 21 Q36 24 30 23 Z" fill="url(#treasureBag)" stroke="#2b1a14" stroke-width=".8"/>' +
+      '<path d="M28 14 Q36 11 38 16 L37 20 Q31 18 27 20 Z" fill="url(#treasureGold)" stroke="#70420b" stroke-width=".5"/>' +
+      '<circle cx="34.5" cy="16" r="1.15" fill="#fff0a0" opacity=".9"/>' +
+      '<circle cx="36.5" cy="18.3" r=".8" fill="#ffd34d"/>' +
+      '<circle cx="31.5" cy="14.8" r=".75" fill="#ffcf32"/>' +
+      '<circle cx="21" cy="7.5" r="6.4" fill="url(#treasureHead)" stroke="#3a0a14" stroke-width=".8"/>' +
+      '<path d="M16.5 6.5 Q21 3.5 25.5 6.5 L24.5 11 Q21 13 17.5 10.5 Z" fill="#321017" opacity=".8"/>' +
+      '<path d="M17.2 5.2 L12.5 .8 Q13 6 17.5 8 Z" fill="url(#treasureHorn)" stroke="#2a1010" stroke-width=".7"/>' +
+      '<path d="M24.8 5.2 L29.5 .8 Q29 6 24.5 8 Z" fill="url(#treasureHorn)" stroke="#2a1010" stroke-width=".7"/>' +
+      '<path d="M13.7 3 L16.2 5.8 M28.3 3 L25.8 5.8" stroke="#f0c57b" stroke-opacity=".45" stroke-width=".45"/>' +
+      '<ellipse cx="18.5" cy="7.7" rx="1.55" ry="1.25" fill="url(#treasureEye)" filter="url(#treasureGlowFilter)"/>' +
+      '<ellipse cx="23.5" cy="7.7" rx="1.55" ry="1.25" fill="url(#treasureEye)" filter="url(#treasureGlowFilter)"/>' +
+      '<circle cx="18.5" cy="7.7" r=".4" fill="#3b0b0d"/><circle cx="23.5" cy="7.7" r=".4" fill="#3b0b0d"/>' +
+      '<path d="M17.8 10 Q21 13 24.2 10" fill="none" stroke="#2a070d" stroke-width=".9" stroke-linecap="round"/>' +
+      '<path d="M18.3 10.6 Q21 12 23.7 10.6" fill="none" stroke="#ff8a7c" stroke-width=".35" opacity=".7"/>' +
+      '<path d="M8 15 Q4 16 2.5 20 Q4 22 7 20" fill="none" stroke="#8c202d" stroke-width="1.6" stroke-linecap="round"/>' +
+      '<circle cx="5.1" cy="19.4" r="1.25" fill="url(#treasureGold)" stroke="#6f420a" stroke-width=".35"/>' +
+      '<path d="M12 12 Q17 9 20 11" stroke="#ffd34d" stroke-opacity=".35" stroke-width=".8" fill="none"/>' +
+      '<path d="M13 13 Q18 9 22 12 L27 13 L29 16 Q21 17 14 15 Z" fill="url(#treasureBag)" stroke="#2b1a14" stroke-width=".55" transform="rotate(-9 21 14)"/>' +
+      '<path d="M13.5 11.8 Q19 9 25.5 12.2 L27 14.5 Q20 15.5 14 13.7 Z" fill="url(#treasureGold)" stroke="#70420b" stroke-width=".45" transform="rotate(-9 21 14)"/>' +
+      '<circle cx="17" cy="12.4" r=".85" fill="#fff1a8"/><circle cx="20" cy="11.8" r=".72" fill="#ffd34d"/><circle cx="23.2" cy="12.4" r=".8" fill="#f2b72a"/>' +
+      '<polygon points="21,10.2 22.2,11.6 21,13 19.8,11.6" fill="#9c45ff" stroke="#e6b4ff" stroke-width=".3" filter="url(#treasureGlowFilter)"/>' +
     '</svg>';
+
+  // Bosses get a different 2.5D silhouette for every Hell map.
+  // Each sprite is built from layered planes, bevels, highlights and a cast shadow so it
+  // reads as a chunky miniature model rather than a flat icon.
+  var BOSS_SVGS = {
+    ashen:
+      '<svg viewBox="0 0 34 40" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="17" cy="37.5" rx="12" ry="2.2" fill="#090405" opacity=".65"/>' +
+        '<path class="limb leg-l" d="M9 26 L15 27 L14 37 L8 37 Z" fill="#4b1113"/><path class="limb leg-r" d="M19 27 L25 26 L27 37 L21 37 Z" fill="#28090b"/>' +
+        '<path class="limb arm-l" d="M9 14 L3 19 L5 27 L11 24 Z" fill="#7f2422"/><path class="limb arm-r" d="M25 14 L31 18 L29 27 L23 24 Z" fill="#451113"/>' +
+        '<path d="M7 13 Q17 8 27 13 L25 29 Q17 34 9 29 Z" fill="#8f2723" stroke="#2a0709" stroke-width="1"/>' +
+        '<path d="M9 14 Q17 10 25 14 L23 20 Q17 18 11 20 Z" fill="#d34a31" opacity=".9"/>' +
+        '<path d="M11 21 Q17 18 23 21 L22 29 Q17 31 12 29 Z" fill="#521217"/>' +
+        '<path d="M10 15 L24 15" stroke="#ff9a63" stroke-width="1.2" opacity=".65"/>' +
+        '<path d="M17 10 L13 3 L16 6 L17 1 L19 6 L23 3 L20 10" fill="#2a080a" stroke="#c13a29" stroke-width=".5"/>' +
+        '<path d="M8 9 L4 3 Q8 4 11 9" fill="#531316"/><path d="M26 9 L30 3 Q26 4 23 9" fill="#300a0c"/>' +
+        '<path d="M9 9 Q17 4 25 9 L23 16 Q17 20 11 16 Z" fill="#a63229" stroke="#350b0d" stroke-width="1"/>' +
+        '<path d="M10 9 Q17 5 24 9" stroke="#ff8152" stroke-width="1.1" opacity=".7"/>' +
+        '<polygon points="11,11 15,10 14,13 11,13" fill="#ffcf68"/><polygon points="19,10 23,11 23,13 20,13" fill="#ff7a35"/>' +
+      '</svg>',
+    bone:
+      '<svg viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="18" cy="39" rx="13" ry="2.3" fill="#0a0907" opacity=".68"/>' +
+        '<path class="limb leg-l" d="M10 28 L16 28 L14 39 L8 39 Z" fill="#8e8067"/><path class="limb leg-r" d="M20 28 L26 28 L28 39 L22 39 Z" fill="#514936"/>' +
+        '<path class="limb arm-l" d="M10 15 L3 23 L7 28 L13 23 Z" fill="#a99574"/><path class="limb arm-r" d="M26 15 L33 22 L29 28 L23 23 Z" fill="#5f5440"/>' +
+        '<path d="M8 14 Q18 9 28 14 L26 31 Q18 35 10 31 Z" fill="#756a55" stroke="#29241c" stroke-width="1"/>' +
+        '<path d="M10 16 L26 16 L24 22 L12 22 Z" fill="#c7b895"/><path d="M12 23 L24 23 L23 30 L13 30 Z" fill="#4d4536"/>' +
+        '<path d="M12 16 L15 29 M18 14 L18 31 M24 16 L21 29" stroke="#e2d4b1" stroke-width="1.1" opacity=".6"/>' +
+        '<path d="M8 10 L4 2 L11 7 L14 1 L18 6 L22 1 L25 7 L32 2 L28 11" fill="#423a2d" stroke="#b6a27e" stroke-width=".6"/>' +
+        '<path d="M10 9 Q18 4 26 9 L25 16 Q18 20 11 16 Z" fill="#b9a889" stroke="#41382b" stroke-width="1"/>' +
+        '<path d="M11 11 L25 11 M12 14 L24 14" stroke="#665b48" stroke-width="1"/>' +
+        '<circle cx="13.5" cy="11.5" r="1.25" fill="#fff0bd"/><circle cx="22.5" cy="11.5" r="1.25" fill="#fff0bd"/>' +
+      '</svg>',
+    molten:
+      '<svg viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="18" cy="39" rx="14" ry="2.5" fill="#100403" opacity=".7"/>' +
+        '<path class="limb leg-l" d="M9 27 L16 28 L14 39 L7 38 Z" fill="#45100a"/><path class="limb leg-r" d="M20 28 L27 27 L29 38 L22 39 Z" fill="#240806"/>' +
+        '<path class="limb arm-l" d="M10 15 L2 19 L5 28 L12 24 Z" fill="#7a1d0b"/><path class="limb arm-r" d="M26 15 L34 19 L31 28 L24 24 Z" fill="#3b0b06"/>' +
+        '<path d="M7 13 Q18 8 29 13 L26 31 Q18 35 10 31 Z" fill="#651609" stroke="#210604" stroke-width="1"/>' +
+        '<path d="M9 14 Q18 10 27 14 L25 21 Q18 18 11 21 Z" fill="#ff4b16"/>' +
+        '<path d="M12 22 L24 22 L23 29 Q18 31 13 29 Z" fill="#2b0705"/>' +
+        '<path d="M11 15 Q13 18 15 20 M25 15 Q23 18 21 20 M17 13 L18 25" stroke="#ffb21e" stroke-width="1.2" fill="none"/>' +
+        '<path d="M8 9 L4 1 L12 6 L15 0 L18 6 L22 0 L25 6 L32 1 L28 10" fill="#280806" stroke="#ff6a20" stroke-width=".7"/>' +
+        '<path d="M9 9 Q18 4 27 9 L24 16 Q18 19 12 16 Z" fill="#9d230b" stroke="#300705" stroke-width="1"/>' +
+        '<path d="M11 9 Q18 6 25 9" stroke="#ffb72d" stroke-width="1.2"/><path d="M13 15 L23 15" stroke="#ff5a1a" stroke-width="1.2"/>' +
+        '<circle cx="13" cy="11.5" r="1.35" fill="#fff3a8"/><circle cx="23" cy="11.5" r="1.35" fill="#ff8a25"/>' +
+      '</svg>',
+    void:
+      '<svg viewBox="0 0 38 44" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="19" cy="40" rx="14" ry="2.2" fill="#030208" opacity=".75"/>' +
+        '<path class="limb leg-l" d="M10 29 L17 27 L15 40 L8 39 Z" fill="#24133b"/><path class="limb leg-r" d="M21 27 L28 29 L30 39 L23 40 Z" fill="#12091e"/>' +
+        '<path class="limb arm-l" d="M11 15 L2 21 L7 28 L14 23 Z" fill="#47246d"/><path class="limb arm-r" d="M27 15 L36 21 L31 28 L24 23 Z" fill="#1e0d34"/>' +
+        '<path d="M8 13 Q19 7 30 13 L27 31 Q19 36 11 31 Z" fill="#3a1a58" stroke="#0c0615" stroke-width="1"/>' +
+        '<path d="M10 14 Q19 10 28 14 L25 21 Q19 18 13 21 Z" fill="#7040a0"/>' +
+        '<path d="M13 22 Q19 19 25 22 L23 30 Q19 32 14 30 Z" fill="#170a29"/>' +
+        '<path d="M12 15 L16 28 M26 15 L22 28 M19 12 L19 30" stroke="#c49cff" stroke-width=".8" opacity=".75"/>' +
+        '<path d="M8 9 L4 1 L12 6 L16 -1 L19 6 L23 -1 L27 6 L34 1 L29 10" fill="#10071b" stroke="#8e52d1" stroke-width=".7"/>' +
+        '<path d="M9 9 Q19 3 29 9 L26 17 Q19 20 12 17 Z" fill="#512579" stroke="#170b26" stroke-width="1"/>' +
+        '<path d="M11 10 Q19 6 27 10" stroke="#e0c7ff" stroke-width="1"/><path d="M13 15 Q19 18 25 15" stroke="#a855f7" stroke-width="1" fill="none"/>' +
+        '<circle cx="13" cy="11.5" r="1.35" fill="#f0dcff"/><circle cx="25" cy="11.5" r="1.35" fill="#b879ff"/>' +
+        '<circle cx="19" cy="8" r="1.1" fill="#ffffff" opacity=".9"/>' +
+      '</svg>',
+    obsidian:
+      '<svg viewBox="0 0 38 44" xmlns="http://www.w3.org/2000/svg">' +
+        '<ellipse cx="19" cy="40" rx="14" ry="2.3" fill="#020508" opacity=".75"/>' +
+        '<path class="limb leg-l" d="M10 28 L17 27 L15 40 L8 39 Z" fill="#24333d"/><path class="limb leg-r" d="M21 27 L28 28 L30 39 L23 40 Z" fill="#111c23"/>' +
+        '<path class="limb arm-l" d="M11 15 L3 20 L7 29 L14 23 Z" fill="#38505c"/><path class="limb arm-r" d="M27 15 L35 20 L31 29 L24 23 Z" fill="#1b2931"/>' +
+        '<path d="M7 13 Q19 7 31 13 L27 31 Q19 36 11 31 Z" fill="#263942" stroke="#071015" stroke-width="1.2"/>' +
+        '<path d="M9 14 L29 14 L26 21 L12 21 Z" fill="#54717d"/><path d="M12 22 L26 22 L24 30 L14 30 Z" fill="#14242c"/>' +
+        '<path d="M10 15 L15 29 M18 12 L19 31 M28 15 L23 29" stroke="#a9e8ff" stroke-width=".8" opacity=".65"/>' +
+        '<path d="M8 9 L3 1 L12 6 L15 -1 L19 6 L23 -1 L26 6 L35 1 L30 10" fill="#0c151b" stroke="#6c8792" stroke-width=".8"/>' +
+        '<path d="M9 9 Q19 4 29 9 L26 17 Q19 20 12 17 Z" fill="#35525f" stroke="#0b161c" stroke-width="1"/>' +
+        '<path d="M11 10 L27 10" stroke="#d4f5ff" stroke-width="1"/><path d="M13 15 L25 15" stroke="#74c9e7" stroke-width="1.2"/>' +
+        '<polygon points="13,11 16,10 16,13 13,13" fill="#e9fbff"/><polygon points="22,10 25,11 25,13 22,13" fill="#8adfff"/>' +
+        '<path d="M15 18 L19 22 L23 18" fill="none" stroke="#8edfff" stroke-width=".8" opacity=".7"/>' +
+      '</svg>'
+  };
+  var BOSS_SVG = BOSS_SVGS.ashen;
+  function bossSvgForMap() { return BOSS_SVGS[lastBattlefieldMapKey || 'ashen'] || BOSS_SVGS.ashen; }
 
   var FLIER_SVG =
-    '<svg viewBox="0 0 24 26" xmlns="http://www.w3.org/2000/svg">' +
-      '<ellipse class="limb wing-l" cx="4" cy="11" rx="5.5" ry="3" fill="#c9962f" opacity="0.85"/>' +
-      '<ellipse class="limb wing-r" cx="20" cy="11" rx="5.5" ry="3" fill="#c9962f" opacity="0.85"/>' +
-      '<rect class="limb leg-l" x="9" y="17" width="2.6" height="5" rx="1.2" fill="#9a5a12"/>' +
-      '<rect class="limb leg-r" x="12.4" y="17" width="2.6" height="5" rx="1.2" fill="#9a5a12"/>' +
-      '<ellipse cx="12" cy="14" rx="5.4" ry="5" fill="#d4a017"/>' +
-      '<circle cx="12" cy="7.2" r="3.8" fill="#d4a017"/>' +
-      '<polygon points="8.8,5.2 7,2 9.8,4" fill="#5c3a0a"/>' +
-      '<polygon points="15.2,5.2 17,2 14.2,4" fill="#5c3a0a"/>' +
-      '<circle cx="10.3" cy="7.4" r="1" fill="#fff2c9"/>' +
-      '<circle cx="13.7" cy="7.4" r="1" fill="#fff2c9"/>' +
+    '<svg viewBox="0 0 26 28" xmlns="http://www.w3.org/2000/svg">' +
+      '<g class="wing-l-inner">' +
+        '<polygon points="10,9 4,7.5 4,12.5 10,13" fill="#8a6015"/>' +
+        '<polygon points="10,9 4,7.5 4,10 10,11" fill="#c9962f" opacity="0.9"/>' +
+        '<polygon points="10,11 4,10 4,12.5 10,13" fill="#5c3f0d" opacity="0.85"/>' +
+        '<g class="wing-l-outer">' +
+          '<polygon points="4,7.5 -2,5.5 -4,10.5 -2,15 4,12.5" fill="#8a6015"/>' +
+          '<polygon points="4,7.5 -2,6.5 -4,10.5 4,11" fill="#c9962f" opacity="0.9"/>' +
+          '<polygon points="4,11 -4,10.5 -2,15 4,12.5" fill="#5c3f0d" opacity="0.85"/>' +
+          '<path d="M4,9 L-4,10.5 M4,9 L-2,15" stroke="#3a2708" stroke-width="0.35" opacity="0.6" fill="none"/>' +
+        '</g>' +
+      '</g>' +
+      '<g class="wing-r-inner">' +
+        '<polygon points="16,9 22,7.5 22,12.5 16,13" fill="#8a6015"/>' +
+        '<polygon points="16,9 22,7.5 22,10 16,11" fill="#c9962f" opacity="0.9"/>' +
+        '<polygon points="16,11 22,10 22,12.5 16,13" fill="#5c3f0d" opacity="0.85"/>' +
+        '<g class="wing-r-outer">' +
+          '<polygon points="22,7.5 28,5.5 30,10.5 28,15 22,12.5" fill="#8a6015"/>' +
+          '<polygon points="22,7.5 28,6.5 30,10.5 22,11" fill="#c9962f" opacity="0.9"/>' +
+          '<polygon points="22,11 30,10.5 28,15 22,12.5" fill="#5c3f0d" opacity="0.85"/>' +
+          '<path d="M22,9 L30,10.5 M22,9 L28,15" stroke="#3a2708" stroke-width="0.35" opacity="0.6" fill="none"/>' +
+        '</g>' +
+      '</g>' +
+      '<rect class="limb leg-l" x="10" y="19" width="2.6" height="5" rx="1.2" fill="#7a4408"/>' +
+      '<rect class="limb leg-r" x="13.4" y="19" width="2.6" height="5" rx="1.2" fill="#9a5a12"/>' +
+      '<ellipse cx="13" cy="16" rx="5.6" ry="5.2" fill="#a97812"/>' +
+      '<ellipse cx="11.6" cy="14.3" rx="4.4" ry="3.8" fill="#d4a017" opacity="0.9"/>' +
+      '<circle cx="13" cy="9.2" r="3.9" fill="#a97812"/>' +
+      '<circle cx="11.9" cy="8" r="3" fill="#d4a017" opacity="0.9"/>' +
+      '<polygon points="9.8,7.2 8,4 10.8,6" fill="#3a2708"/>' +
+      '<polygon points="16.2,7.2 18,4 15.2,6" fill="#3a2708"/>' +
+      '<circle cx="11.3" cy="9.4" r="1" fill="#fff2c9"/>' +
+      '<circle cx="14.7" cy="9.4" r="1" fill="#fff2c9"/>' +
+      '<circle cx="11.3" cy="9.4" r="0.45" fill="#c23b1f"/>' +
+      '<circle cx="14.7" cy="9.4" r="0.45" fill="#c23b1f"/>' +
     '</svg>';
 
   var ARMORED_SVG =
-    '<svg viewBox="0 0 24 26" xmlns="http://www.w3.org/2000/svg">' +
-      '<rect class="limb leg-l" x="8" y="17" width="3.2" height="7" rx="1.2" fill="#5a5f66"/>' +
-      '<rect class="limb leg-r" x="12.8" y="17" width="3.2" height="7" rx="1.2" fill="#5a5f66"/>' +
-      '<rect class="limb arm-l" x="4.8" y="11" width="2.8" height="6" rx="1" fill="#6b7078"/>' +
-      '<rect class="limb arm-r" x="16.4" y="11" width="2.8" height="6" rx="1" fill="#6b7078"/>' +
-      '<ellipse cx="12" cy="13.5" rx="6.6" ry="6" fill="#7a1f1f"/>' +
-      '<rect x="6.4" y="9.5" width="11.2" height="8" rx="2" fill="#4c525c"/>' +
-      '<rect x="6.4" y="9.5" width="11.2" height="2.4" rx="1" fill="#8a8d99"/>' +
-      '<circle cx="12" cy="6.6" r="4.2" fill="#a52d2d"/>' +
-      '<rect x="8" y="5" width="8" height="2.6" rx="1" fill="#5a5f66"/>' +
-      '<circle cx="10" cy="6.8" r="1" fill="#d9b3ff"/>' +
-      '<circle cx="14" cy="6.8" r="1" fill="#d9b3ff"/>' +
+    '<svg viewBox="0 0 36 42" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="bruteMetal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e3e7ee"/><stop offset="0.28" stop-color="#858d99"/><stop offset="0.62" stop-color="#3d444d"/><stop offset="1" stop-color="#171b20"/></linearGradient>' +
+        '<linearGradient id="bruteSteel" x1="0" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#cdd3dc"/><stop offset="0.45" stop-color="#59616c"/><stop offset="1" stop-color="#242a31"/></linearGradient>' +
+        '<radialGradient id="bruteSkin" cx="32%" cy="25%"><stop offset="0" stop-color="#e75a4b"/><stop offset="0.45" stop-color="#a52d2d"/><stop offset="1" stop-color="#4b1115"/></radialGradient>' +
+        '<linearGradient id="bruteHorn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff0c9"/><stop offset="0.45" stop-color="#a98759"/><stop offset="1" stop-color="#49351f"/></linearGradient>' +
+        '<radialGradient id="bruteEye"><stop offset="0" stop-color="#ffffff"/><stop offset="0.35" stop-color="#ffbf4a"/><stop offset="1" stop-color="#d43b12"/></radialGradient>' +
+      '</defs>' +
+      '<ellipse cx="18" cy="39" rx="13" ry="2.5" fill="#050607" opacity=".55"/>' +
+      '<rect class="limb leg-l" x="9" y="28" width="6" height="11" rx="2" fill="url(#bruteMetal)" stroke="#11151a" stroke-width=".7"/>' +
+      '<rect class="limb leg-r" x="21" y="28" width="6" height="11" rx="2" fill="url(#bruteMetal)" stroke="#11151a" stroke-width=".7"/>' +
+      '<path class="limb arm-l" d="M9 17 Q4 18 3 26 Q3 29 6 30 L10 27 Z" fill="url(#bruteMetal)" stroke="#11151a" stroke-width=".8"/>' +
+      '<path class="limb arm-r" d="M27 17 Q32 18 33 26 Q33 29 30 30 L26 27 Z" fill="url(#bruteMetal)" stroke="#11151a" stroke-width=".8"/>' +
+      '<path d="M7 15 Q18 10 29 15 L28 29 Q18 35 8 29 Z" fill="url(#bruteSkin)" stroke="#3a0c10" stroke-width="1"/>' +
+      '<path d="M7.5 15 Q18 11 28.5 15 L27.5 21 Q18 18 8.5 21 Z" fill="url(#bruteSteel)" stroke="#171b20" stroke-width=".8"/>' +
+      '<path d="M9 21 L27 21 L26.5 28 Q18 31 9.5 28 Z" fill="url(#bruteMetal)" opacity=".95"/>' +
+      '<path d="M10 16 L26 16" stroke="#ffffff" stroke-opacity=".45" stroke-width="1.2" stroke-linecap="round"/>' +
+      '<path d="M12 23 L24 23" stroke="#e7edf5" stroke-opacity=".3" stroke-width="1"/>' +
+      '<path d="M12 6 L6 1 Q6 7 10 10" fill="url(#bruteHorn)" stroke="#392719" stroke-width=".8"/>' +
+      '<path d="M24 6 L30 1 Q30 7 26 10" fill="url(#bruteHorn)" stroke="#392719" stroke-width=".8"/>' +
+      '<circle cx="18" cy="10" r="7.3" fill="url(#bruteSkin)" stroke="#3a0c10" stroke-width="1"/>' +
+      '<path d="M11 9 Q18 5 25 9 L24 14 Q18 17 12 14 Z" fill="#242a31" stroke="#11151a" stroke-width=".7"/>' +
+      '<circle cx="15" cy="11" r="1.45" fill="url(#bruteEye)"/><circle cx="21" cy="11" r="1.45" fill="url(#bruteEye)"/>' +
+      '<circle cx="15.3" cy="10.7" r=".38" fill="#fff"/><circle cx="21.3" cy="10.7" r=".38" fill="#fff"/>' +
+      '<path d="M14 15 Q18 17 22 15" stroke="#3a0c10" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
+      '<path d="M9 18 Q18 15 27 18" stroke="#ffffff" stroke-opacity=".18" stroke-width="1" fill="none"/>' +
     '</svg>';
 
   var DEMON_TYPES = {
     normal: { hpMult: 1, speedMult: 1, dmgMult: 1, goldMult: 1, cls: '', svg: null },
     swarmer: { hpMult: 0.32, speedMult: 2.1, dmgMult: 0.5, goldMult: 0.6, cls: 'imp', svg: null },
-    armoredBrute: { hpMult: 3.0, speedMult: 0.42, dmgMult: 1.8, goldMult: 2.5, cls: 'armoredBrute', svg: 'armored', armored: true },
+    armoredBrute: { hpMult: 3.0, speedMult: 0.42, dmgMult: 1.8, goldMult: 2.5, cls: 'armoredBrute', svg: 'armored', armored: true, armorMult: 0.4 },
     flier: { hpMult: 0.75, speedMult: 1.0, dmgMult: 0.85, goldMult: 1.4, cls: 'flier', svg: 'flier', flying: true },
     summoner: { hpMult: 2.2, speedMult: 0.6, dmgMult: 0.9, goldMult: 2.0, cls: 'summoner', svg: null, summons: true },
-    treasure: { hpMult: 9.0, speedMult: 0.15, dmgMult: 0.8, goldMult: 0, cls: 'treasure', svg: null },
+    treasure: { hpMult: 90.0, speedMult: 0.15, dmgMult: 0.8, goldMult: 0, cls: 'treasure', svg: 'treasure', armored: true, armorMult: 0.2 },
     boss: { hpMult: 14, speedMult: 0.5, dmgMult: 3.5, goldMult: 10, cls: 'boss', svg: 'boss' }
   };
   function rollDemonType() {
@@ -2048,15 +2391,15 @@
       speed: (0.9 + Math.random() * 0.25 + state.wave * 0.04) * cfg.speedMult * earthShaperSpeedMult(),
       dmg: Math.round((11 + state.wave * 2) * cfg.dmgMult),
       goldMult: cfg.goldMult, type: type,
-      flying: !!cfg.flying, armored: !!cfg.armored, summons: !!cfg.summons, lastSummonAt: simTimeMs,
+      flying: !!cfg.flying, armored: !!cfg.armored, armorMult: cfg.armorMult || 1, summons: !!cfg.summons, lastSummonAt: simTimeMs,
       blockedSlot: null, slowedUntil: 0
     };
     state.demons.push(demon);
     var el = document.createElement('div');
-    el.className = 'demon' + (cfg.cls ? ' ' + cfg.cls : '');
+    el.className = 'demon' + (cfg.cls ? ' ' + cfg.cls : '') + (type === 'boss' ? ' boss-' + (lastBattlefieldMapKey || 'ashen') : '');
     el.style.left = '100%';
     el.style.top = 'calc(50% + ' + curOffset(100) + 'px)';
-    var svgMarkup = cfg.svg === 'boss' ? BOSS_SVG : cfg.svg === 'flier' ? FLIER_SVG : cfg.svg === 'armored' ? ARMORED_SVG : DEMON_SVG;
+    var svgMarkup = cfg.svg === 'boss' ? bossSvgForMap() : cfg.svg === 'flier' ? FLIER_SVG : cfg.svg === 'armored' ? ARMORED_SVG : cfg.svg === 'treasure' ? TREASURE_SVG : DEMON_SVG;
     el.innerHTML = svgMarkup + '<div class="dhp"></div>';
     battlefield.appendChild(el);
     demonEls[demon.id] = el;
@@ -2107,8 +2450,13 @@
   var gameOver = false;
   var WAVE_BREATHER_MS = 4500;
   var WAVE_BASE_ENEMIES = 10;
-  var WAVE_GROWTH = 1.25;
-  function waveEnemyTotal(wave) { return Math.round(WAVE_BASE_ENEMIES * Math.pow(WAVE_GROWTH, wave - 1)); }
+  var WAVE_ENEMY_CAP = 60;
+  // Enemy count grows for the first 100 waves, then holds steady — from there, difficulty keeps
+  // climbing entirely through per-enemy HP/damage (see spawnDemon), which already scales every
+  // wave forever. Uncapped enemy count would mean a wave's spawn phase alone taking hours (and
+  // eventually crashing the browser trying to render millions of demons), long before the HP/damage
+  // curve became the limiting factor.
+  function waveEnemyTotal(wave) { return Math.min(WAVE_ENEMY_CAP, WAVE_BASE_ENEMIES + Math.floor(wave / 2)); }
   function spawnIntervalForWave(wave) { return Math.max(180, 2800 - wave * 150); }
 
   // ---------- Ashen Trials: Eternal Night ----------
@@ -2119,10 +2467,10 @@
   function recreateDemonEl(d) {
     var cfg = DEMON_TYPES[d.type] || {};
     var el = document.createElement('div');
-    el.className = 'demon' + (cfg.cls ? ' ' + cfg.cls : '');
+    el.className = 'demon' + (cfg.cls ? ' ' + cfg.cls : '') + (d.type === 'boss' ? ' boss-' + (lastBattlefieldMapKey || 'ashen') : '');
     el.style.left = Math.max(0, d.pos) + '%';
     el.style.top = 'calc(50% + ' + curOffset(Math.max(0, d.pos)) + 'px)';
-    var svgMarkup = cfg.svg === 'boss' ? BOSS_SVG : cfg.svg === 'flier' ? FLIER_SVG : cfg.svg === 'armored' ? ARMORED_SVG : DEMON_SVG;
+    var svgMarkup = cfg.svg === 'boss' ? bossSvgForMap() : cfg.svg === 'flier' ? FLIER_SVG : cfg.svg === 'armored' ? ARMORED_SVG : DEMON_SVG;
     el.innerHTML = svgMarkup + '<div class="dhp"></div>';
     battlefield.appendChild(el);
     demonEls[d.id] = el;
@@ -2470,7 +2818,7 @@
         spawnSummonedMinion(d.pos);
       }
       if (d.burnUntil && now < d.burnUntil) {
-        d.hp -= (d.burnDps || 0) * dt * (d.armored ? 0.4 : 1);
+        d.hp -= (d.burnDps || 0) * dt * (d.armored ? d.armorMult : 1);
         if (d.burnSpreadNext && now >= d.burnSpreadNext) {
           d.burnSpreadNext = now + 2000;
           state.demons.forEach(function(o) {
@@ -2482,7 +2830,7 @@
         }
       }
       if (d.bleedUntil && now < d.bleedUntil) {
-        d.hp -= (d.bleedDps || 0) * dt * (d.armored ? 0.4 : 1);
+        d.hp -= (d.bleedDps || 0) * dt * (d.armored ? d.armorMult : 1);
       }
     });
 
@@ -2491,7 +2839,7 @@
         var zone = scorchZones[szi];
         if (now >= zone.until) { scorchZones.splice(szi, 1); continue; }
         state.demons.forEach(function(d) {
-          if (Math.abs(d.pos - zone.percent) <= 4) d.hp -= zone.dps * dt * (d.armored ? 0.4 : 1);
+          if (Math.abs(d.pos - zone.percent) <= 4) d.hp -= zone.dps * dt * (d.armored ? d.armorMult : 1);
         });
       }
     }
@@ -2547,7 +2895,7 @@
           var flashFreeze = occ.defId === 'archerTower' && towerPlaced('archerTower') && towerPlaced('frostSpire') && target.frostedUntil && now < target.frostedUntil;
           if (flashFreeze) hitDmg *= 3;
           var relicMult1 = applyRelicHit(occ, target, now);
-          target.hp -= hitDmg * relicMult1 * (target.armored ? 0.4 : 1);
+          target.hp -= hitDmg * relicMult1 * (target.armored ? target.armorMult : 1);
           if (flashFreeze) {
             state.demons.forEach(function(o) {
               if (Math.abs(o.pos - target.pos) <= 8 + synergyRadiusBonus()) {
@@ -2570,7 +2918,7 @@
             spawnArrowProjectile(slot.percent, target.pos); SFX.arrowFire();
             if (hasEquip(occ, 'piercingBroadheads')) {
               var second = pickTarget({ percent: slot.percent }, effRange, occ.targetMode === 'nearest' ? 'furthest' : 'nearest');
-              if (second && second !== target) second.hp -= hitDmg * 0.5 * (second.armored ? 0.4 : 1);
+              if (second && second !== target) second.hp -= hitDmg * 0.5 * (second.armored ? second.armorMult : 1);
             }
             if (hasEquip(occ, 'wolfTrapFling') && now >= (occ.trapReadyAt || 0)) {
               occ.trapReadyAt = now + 8000;
@@ -2594,7 +2942,7 @@
         state.demons.forEach(function(d) {
           if (Math.abs(slot.percent - d.pos) <= aoeRange) {
             var relicMult2 = applyRelicHit(occ, d, now);
-            d.hp -= effDmg * relicMult2 * (d.armored ? 0.4 : 1);
+            d.hp -= effDmg * relicMult2 * (d.armored ? d.armorMult : 1);
             var slowDur = chilling ? 1400 : 700;
             var slowStrength = chilling ? 0.3 : 0.5;
             if (!(d.slowedUntil > now) || slowStrength <= (d.slowMult === undefined ? 1 : d.slowMult)) {
@@ -2620,7 +2968,7 @@
           if (Math.abs(slot.percent - d.pos) <= effRange) {
             var frosted = pyroclastic && d.frostedUntil && now < d.frostedUntil;
             var relicMult3 = applyRelicHit(occ, d, now);
-            d.hp -= effDmg * relicMult3 * (d.armored ? 0.4 : 1);
+            d.hp -= effDmg * relicMult3 * (d.armored ? d.armorMult : 1);
             d.burnUntil = now + 2000;
             d.burnDps = Math.max(d.burnDps || 0, def.burnDps + lvl('def_towerdmg') * 0.3);
             if (hasEquip(occ, 'spreadingWildfire') && !d.burnSpreadNext) d.burnSpreadNext = now + 2000;
@@ -2654,19 +3002,19 @@
         var cTarget = pickTarget(slot, effRange, occ.targetMode);
         if (cTarget) {
           var splashRadius = volatile ? 8 * 1.3 : 8;
-          var armorMult = cTarget.armored ? 0.4 : 1;
+          var armorMult = cTarget.armored ? cTarget.armorMult : 1;
           if (hasEquip(occ, 'heavyPayload') && cTarget.armored) {
             cTarget.shredStacks = Math.min(5, (cTarget.shredStacks || 0) + 1);
-            armorMult = Math.min(1, 0.4 + cTarget.shredStacks * 0.06);
+            armorMult = Math.min(1, cTarget.armorMult + cTarget.shredStacks * 0.06);
           }
           cTarget.hp -= effDmg * applyRelicHit(occ, cTarget, now) * armorMult;
           state.demons.forEach(function(d) {
-            if (d !== cTarget && Math.abs(d.pos - cTarget.pos) <= splashRadius) d.hp -= (def.splashDmg || 0) * (d.armored ? 0.4 : 1);
+            if (d !== cTarget && Math.abs(d.pos - cTarget.pos) <= splashRadius) d.hp -= (def.splashDmg || 0) * (d.armored ? d.armorMult : 1);
           });
           if (hasEquip(occ, 'shrapnelPack')) {
             var behind = state.demons.filter(function(d) { return d !== cTarget && d.pos < cTarget.pos; })
               .sort(function(a, b) { return b.pos - a.pos; }).slice(0, 3);
-            behind.forEach(function(d) { d.hp -= (def.splashDmg || 0) * 0.6 * (d.armored ? 0.4 : 1); });
+            behind.forEach(function(d) { d.hp -= (def.splashDmg || 0) * 0.6 * (d.armored ? d.armorMult : 1); });
           }
           if (towerPlaced('cannonTower') && towerPlaced('flamethrower')) {
             scorchZones.push({ percent: slot.percent, until: now + 4000, dps: 3 + state.wave * 0.15 });
@@ -2690,7 +3038,7 @@
           if (hasShatter) {
             var shatterDmg = 8 + Math.round(state.wave * 0.6);
             state.demons.forEach(function(o) {
-              if (o !== d && Math.abs(o.pos - d.pos) <= 10) o.hp -= shatterDmg * (o.armored ? 0.4 : 1);
+              if (o !== d && Math.abs(o.pos - d.pos) <= 10) o.hp -= shatterDmg * (o.armored ? o.armorMult : 1);
             });
             spawnDeathBurst(Math.max(0, d.pos), false);
           }
@@ -3046,14 +3394,53 @@
     { key: 'obsidian', name: 'Obsidian Spire', icon: '🧊', bg: 'linear-gradient(180deg, #0c1a24 0%, #060c11 100%)', accent: '#7dc4ff' }
   ];
   function hellMapFor(level) { return HELL_MAPS[Math.floor(level / 10) % HELL_MAPS.length]; }
+
+  // ---------- Theme-matched 2.5D map scenery ----------
+  var ZONE_SPRITES = {
+    ashen: [
+      { x: 16, y: 18, w: 105, h: 116, svg: `<svg viewBox="0 0 120 132"><ellipse cx="60" cy="121" rx="44" ry="8" fill="#000" opacity=".34"/><path d="M20 112V50l40-18 40 18v62z" fill="#4a1714"/><path d="M20 50l40 18 40-18-40-22z" fill="#793024"/><path d="M20 50l40 18v44L20 94z" fill="#62221c"/><path d="M60 68l40-18v44l-40 18z" fill="#351315"/><path d="M47 111V70h26v41z" fill="#16090b"/><path d="M50 109V75h20v34" fill="#ff4b21" opacity=".8"/><path class="zglow" d="M55 108V78h10v30" stroke="#ffd06a" stroke-width="3"/><path d="M11 54l49-29 49 29-9 5-40-23-40 23z" fill="#241012"/><path d="M25 47l35-21 35 21" stroke="#b33a27" stroke-width="3" fill="none"/><path d="M28 112h64" stroke="#ff6b35" stroke-width="3" opacity=".55"/></svg>` },
+      { x: 83, y: 19, w: 88, h: 100, svg: `<svg viewBox="0 0 100 116"><ellipse cx="50" cy="106" rx="37" ry="7" fill="#000" opacity=".3"/><path d="M20 94L28 35 50 22l22 13 8 59z" fill="#351315"/><path d="M28 35l22 12 22-12-22-13z" fill="#7b3024"/><path d="M20 94l30-15 30 15-30 13z" fill="#531c18"/><path d="M42 88V57l8-5 8 5v31" fill="#14080a"/><circle class="zglow" cx="50" cy="68" r="8" fill="#ff4b21" opacity=".65"/><path d="M12 36l12-18 8 16M88 36L76 18l-8 16" fill="#1b0b0c"/><path d="M17 89l8-43 7 3-7 42M83 89l-8-43-7 3 7 42" fill="#8d3a29"/></svg>` },
+      { x: 48, y: 84, w: 76, h: 68, svg: `<svg viewBox="0 0 90 80"><ellipse cx="45" cy="70" rx="34" ry="6" fill="#000" opacity=".3"/><path d="M20 60l10-25 15-9 15 9 10 25-25 8z" fill="#5a201a"/><path d="M30 35l15 9 15-9-15-9z" fill="#9b3c29"/><path d="M37 61V47h16v14" fill="#17090a"/><path class="zglow" d="M43 60V50h4v10" stroke="#ffb627" stroke-width="3"/><path d="M12 62l9-13 8 10M78 62L69 49l-8 10" stroke="#2b1012" stroke-width="5"/></svg>` }
+    ],
+    bone: [
+      { x: 14, y: 20, w: 112, h: 122, svg: `<svg viewBox="0 0 120 132"><ellipse cx="60" cy="121" rx="46" ry="8" fill="#000" opacity=".3"/><path d="M25 108l4-57 31-18 31 18 4 57-35 11z" fill="#6f634e"/><path d="M29 51l31 17 31-17-31-18z" fill="#b9a98b"/><path d="M25 108l35-16 35 16-35 11z" fill="#8e7d60"/><path d="M47 108V72h26v36" fill="#2b2924"/><path d="M52 108V78h16v30" fill="#8df08a" opacity=".4"/><path class="zglow" d="M60 105V82" stroke="#70d86f" stroke-width="4"/><path d="M12 54Q28 28 44 17M108 54Q92 28 76 17" fill="none" stroke="#d8c9a8" stroke-width="7" stroke-linecap="round"/><circle cx="28" cy="35" r="5" fill="#2b2924"/><circle cx="92" cy="35" r="5" fill="#2b2924"/></svg>` },
+      { x: 82, y: 20, w: 92, h: 108, svg: `<svg viewBox="0 0 100 120"><ellipse cx="50" cy="109" rx="37" ry="7" fill="#000" opacity=".3"/><path d="M28 96V48l22-18 22 18v48l-22 12z" fill="#76684f"/><path d="M28 48l22 14 22-14-22-18z" fill="#c4b38e"/><path d="M50 62v46l22-12V48z" fill="#564b3a"/><path d="M36 97h28" stroke="#d8c9a8" stroke-width="5"/><path d="M18 76Q50 20 82 76" fill="none" stroke="#d8c9a8" stroke-width="7"/><path d="M50 26v18" stroke="#5c503f" stroke-width="4"/></svg>` },
+      { x: 48, y: 84, w: 88, h: 76, svg: `<svg viewBox="0 0 100 86"><ellipse cx="50" cy="75" rx="36" ry="6" fill="#000" opacity=".3"/><path d="M20 66l8-30 22-12 22 12 8 30-30 9z" fill="#82735a"/><path d="M28 36l22 12 22-12-22-12z" fill="#c7b58f"/><path d="M41 67V49h18v18" fill="#292721"/><circle class="zglow" cx="50" cy="56" r="5" fill="#8dff88" opacity=".7"/><path d="M15 57l13-9 10 5M85 57l-13-9-10 5" stroke="#d8c9a8" stroke-width="6" fill="none"/></svg>` }
+    ],
+    molten: [
+      { x: 15, y: 18, w: 112, h: 124, svg: `<svg viewBox="0 0 120 132"><ellipse cx="60" cy="121" rx="47" ry="8" fill="#000" opacity=".38"/><path d="M18 108l8-58 34-20 34 20 8 58-42 12z" fill="#34201c"/><path d="M26 50l34 19 34-19-34-20z" fill="#5b3327"/><path d="M18 108l42-17 42 17-42 12z" fill="#241513"/><path d="M45 110V72h30v38" fill="#12090a"/><path class="zglow" d="M51 109V78h18v31" stroke="#ff7a1a" stroke-width="6"/><path d="M30 104l9-47 8 3-8 45M90 104l-9-47-8 3 8 45" stroke="#ff5a1f" stroke-width="5" fill="none"/><path d="M11 58l16-30 10 27M109 58L93 28 83 55" fill="#21100f"/><path class="zglow" d="M16 92Q30 80 40 92T60 92T80 92T104 92" stroke="#ffb627" stroke-width="4" fill="none"/></svg>` },
+      { x: 84, y: 20, w: 96, h: 112, svg: `<svg viewBox="0 0 100 124"><ellipse cx="50" cy="113" rx="38" ry="7" fill="#000" opacity=".35"/><path d="M23 101l7-52 20-18 20 18 7 52-27 10z" fill="#2a1715"/><path d="M30 49l20 15 20-15-20-18z" fill="#673225"/><path d="M50 64v47l27-10V49z" fill="#1b0d0d"/><path d="M40 103V74h20v29" fill="#100707"/><path class="zglow" d="M50 100V78" stroke="#ffb627" stroke-width="5"/><path d="M18 55L8 33l18 10M82 55l10-22-18 10" fill="#170b0b"/><path d="M22 101l9-42M78 101l-9-42" stroke="#ff4b1f" stroke-width="4"/></svg>` },
+      { x: 49, y: 84, w: 82, h: 74, svg: `<svg viewBox="0 0 100 86"><ellipse cx="50" cy="75" rx="37" ry="6" fill="#000" opacity=".34"/><path d="M18 67l9-31 23-14 23 14 9 31-32 9z" fill="#3c211a"/><path d="M27 36l23 13 23-13-23-14z" fill="#7c3b24"/><path d="M39 67V48h22v19" fill="#120707"/><circle class="zglow" cx="50" cy="55" r="6" fill="#ffb627" opacity=".85"/><path d="M15 60l13-12 8 7M85 60L72 48l-8 7" stroke="#ff5a1f" stroke-width="6"/></svg>` }
+    ],
+    void: [
+      { x: 15, y: 19, w: 112, h: 126, svg: `<svg viewBox="0 0 120 134"><ellipse cx="60" cy="122" rx="46" ry="8" fill="#000" opacity=".38"/><path d="M20 108l9-56 31-20 31 20 9 56-40 12z" fill="#171027"/><path d="M29 52l31 17 31-17-31-20z" fill="#332057"/><path d="M20 108l40-16 40 16-40 12z" fill="#24153d"/><path d="M45 109V72h30v37" fill="#090611"/><circle class="zglow" cx="60" cy="88" r="11" fill="#a855f7" opacity=".7"/><circle cx="60" cy="88" r="5" fill="#f0c6ff"/><path d="M60 88l-27-40M60 88l27-40M60 88l-8 39M60 88l8 39" stroke="#7c3aed" stroke-width="3" opacity=".7"/><path d="M11 55l17-28 10 24M109 55L92 27 82 51" fill="#120a1f"/></svg>` },
+      { x: 83, y: 20, w: 94, h: 112, svg: `<svg viewBox="0 0 100 124"><ellipse cx="50" cy="113" rx="37" ry="7" fill="#000" opacity=".34"/><path d="M24 101l8-54 18-17 18 17 8 54-26 11z" fill="#1b102b"/><path d="M32 47l18 14 18-14-18-17z" fill="#43256a"/><path d="M50 61v49l26-9V47z" fill="#11091c"/><circle class="zglow" cx="50" cy="72" r="9" fill="#a855f7" opacity=".75"/><circle cx="50" cy="72" r="3" fill="#fff"/><path d="M15 80l18-23M85 80L67 57" stroke="#6d28d9" stroke-width="4"/><path d="M12 42l16-25 7 25M88 42L72 17l-7 25" fill="#0d0717"/></svg>` },
+      { x: 49, y: 84, w: 88, h: 78, svg: `<svg viewBox="0 0 100 90"><ellipse cx="50" cy="78" rx="36" ry="6" fill="#000" opacity=".34"/><path d="M20 68l9-31 21-14 21 14 9 31-30 10z" fill="#25143b"/><path d="M29 37l21 13 21-13-21-14z" fill="#4b2a72"/><path d="M40 68V50h20v18" fill="#0c0612"/><circle class="zglow" cx="50" cy="57" r="7" fill="#c084fc" opacity=".8"/><path d="M15 62l14-14 7 7M85 62L71 48l-7 7" stroke="#7c3aed" stroke-width="5"/><path d="M50 19v10" stroke="#e9d5ff" stroke-width="2" opacity=".7"/></svg>` }
+    ],
+    obsidian: [
+      { x: 15, y: 18, w: 112, h: 126, svg: `<svg viewBox="0 0 120 134"><ellipse cx="60" cy="122" rx="46" ry="8" fill="#000" opacity=".38"/><path d="M18 108l9-57 33-20 33 20 9 57-42 12z" fill="#102330"/><path d="M27 51l33 19 33-19-33-20z" fill="#27485e"/><path d="M18 108l42-17 42 17-42 12z" fill="#0b1720"/><path d="M45 110V73h30v37" fill="#061016"/><path class="zglow" d="M52 109V79h16v30" stroke="#7dc4ff" stroke-width="5"/><path d="M12 58l17-46 18 42M108 58L91 12 73 54" fill="#3f82aa" stroke="#8fd8ff" stroke-width="1"/><path d="M29 51l10-31 10 27M91 51L81 20 71 47" fill="#6eaed4" opacity=".7"/><path class="zglow" d="M60 27V6" stroke="#b9e6ff" stroke-width="3"/></svg>` },
+      { x: 83, y: 20, w: 98, h: 116, svg: `<svg viewBox="0 0 100 126"><ellipse cx="50" cy="115" rx="38" ry="7" fill="#000" opacity=".34"/><path d="M22 102l8-55 20-19 20 19 8 55-28 11z" fill="#102331"/><path d="M30 47l20 15 20-15-20-19z" fill="#345f7b"/><path d="M50 62v50l28-10V47z" fill="#08151e"/><path class="zglow" d="M50 107V76" stroke="#7dc4ff" stroke-width="5"/><path d="M15 79l15-50 12 45M85 79L70 29 58 74" fill="#5d9fc4"/><path d="M50 28V6" stroke="#d5f1ff" stroke-width="3"/></svg>` },
+      { x: 49, y: 84, w: 86, h: 78, svg: `<svg viewBox="0 0 100 88"><ellipse cx="50" cy="77" rx="37" ry="6" fill="#000" opacity=".34"/><path d="M18 68l9-32 23-14 23 14 9 32-32 10z" fill="#152a38"/><path d="M27 36l23 14 23-14-23-14z" fill="#3d6e89"/><path d="M39 68V49h22v19" fill="#071018"/><circle class="zglow" cx="50" cy="56" r="6" fill="#9fddff" opacity=".85"/><path d="M15 61l13-30 10 27M85 61L72 31 62 58" fill="#5c9fca"/><path d="M50 18v12" stroke="#d8f4ff" stroke-width="2"/></svg>` }
+    ]
+  };
+
+  function renderZoneSprites(mapKey) {
+    var layer = document.getElementById('zone-sprite-layer');
+    if (!layer) return;
+    var set = ZONE_SPRITES[mapKey] || ZONE_SPRITES.ashen;
+    layer.innerHTML = set.map(function(s, i) {
+      return '<div class="zone-sprite" style="left:' + s.x + '%;top:' + s.y + '%;width:' + s.w + 'px;height:' + s.h + 'px;z-index:' + (i + 1) + ';">' + s.svg + '</div>';
+    }).join('');
+  }
   function battlefieldMapFor(wave) { return HELL_MAPS[Math.floor((wave - 1) / 10) % HELL_MAPS.length]; }
   function pathCurveOffset(mapKey, percent) {
     var p = Math.max(0, Math.min(100, percent));
-    if (mapKey === 'bone') return (Math.floor(p / 16.6) % 2 === 0) ? 22 : -22;
-    if (mapKey === 'molten') return Math.sin((p / 100) * Math.PI * 2) * 26;
-    if (mapKey === 'void') return Math.sin((p / 100) * Math.PI * 4) * 18;
-    if (mapKey === 'obsidian') return (((p % 20) / 20) * 2 - 1) * 24;
-    return 0; // ashen: straight line
+    var scale = 3.0;
+    if (mapKey === 'bone') return ((Math.floor(p / 16.6) % 2 === 0) ? 22 : -22) * scale;
+    if (mapKey === 'molten') return Math.sin((p / 100) * Math.PI * 2) * 26 * scale;
+    if (mapKey === 'void') return Math.sin((p / 100) * Math.PI * 4) * 18 * scale;
+    if (mapKey === 'obsidian') return ((((p % 20) / 20) * 2 - 1) * 24) * scale;
+    return Math.sin((p / 100) * Math.PI) * 34; // ashen: gentle valley
   }
   function curOffset(percent) { return pathCurveOffset(lastBattlefieldMapKey || 'ashen', percent); }
   var lastBattlefieldMapKey = null;
@@ -3063,23 +3450,37 @@
     lastBattlefieldMapKey = m.key;
     battlefield.classList.remove('map-ashen', 'map-bone', 'map-molten', 'map-void', 'map-obsidian');
     battlefield.classList.add('map-' + m.key);
+    renderZoneSprites(m.key);
     repositionForCurve();
   }
   var pathLineTrack = document.getElementById('path-line-track');
-  var PATH_SEG_COUNT = 24;
+  var PATH_SAMPLES = 120;
+  var ROAD_H = 430, ROAD_W = 1000;
   function renderPathLine() {
     if (!pathLineTrack) return;
-    pathLineTrack.innerHTML = '';
-    var segWidth = 100 / PATH_SEG_COUNT;
-    for (var s = 0; s < PATH_SEG_COUNT; s++) {
-      var midPercent = ((s + 0.5) / PATH_SEG_COUNT) * 100;
-      var seg = document.createElement('div');
-      seg.className = 'path-seg';
-      seg.style.left = (s * segWidth) + '%';
-      seg.style.width = (segWidth + 0.6) + '%';
-      seg.style.top = 'calc(50% + ' + curOffset(midPercent) + 'px)';
-      pathLineTrack.appendChild(seg);
+    var midY = ROAD_H / 2;
+    var pts = [];
+    for (var s = 0; s <= PATH_SAMPLES; s++) {
+      var pct = (s / PATH_SAMPLES) * 100;
+      var x = (pct / 100) * ROAD_W;
+      var y = midY + curOffset(pct);
+      pts.push(x.toFixed(1) + ',' + y.toFixed(1));
     }
+    var d = 'M' + pts.join(' L');
+    pathLineTrack.innerHTML =
+      '<svg viewBox="0 0 ' + ROAD_W + ' ' + ROAD_H + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<defs>' +
+          '<linearGradient id="roadGrad" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0%" stop-color="#7a5f3d"/>' +
+            '<stop offset="55%" stop-color="#5b4630"/>' +
+            '<stop offset="100%" stop-color="#3a2c1a"/>' +
+          '</linearGradient>' +
+        '</defs>' +
+        '<path d="' + d + '" fill="none" stroke="#1a1210" stroke-width="38" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>' +
+        '<path d="' + d + '" fill="none" stroke="url(#roadGrad)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '<path d="' + d + '" fill="none" stroke="rgba(255,220,160,0.10)" stroke-width="32" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 26" stroke-dashoffset="4"/>' +
+        '<path d="' + d + '" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,11)"/>' +
+      '</svg>';
   }
   function repositionForCurve() {
     renderPathLine();
@@ -4170,7 +4571,21 @@
           state.gold += gg;
           toastMsg += ' +' + gg + '🪙';
         }
-        if (gw + gi + gs > 0) {
+        var wavesGranted = 0;
+        // Keep the waves rolling while away: estimate how many waves the garrison would
+        // have cleared unattended, and grant the gold those kills would have dropped.
+        if (!l.challenge) {
+          var sim = simulateOfflineWaves(state.wave, awaySec);
+          if (sim.wavesCleared > 0) {
+            wavesGranted = sim.wavesCleared;
+            state.wave = sim.newWave;
+            if (state.wave > state.stats.bestWave) state.stats.bestWave = state.wave;
+            state.gold += sim.gold;
+            state.stats.offlineWavesCleared = (state.stats.offlineWavesCleared || 0) + sim.wavesCleared;
+            toastMsg += ' · Held the line through ' + sim.wavesCleared + ' more wave' + (sim.wavesCleared > 1 ? 's' : '') + ' (now Wave ' + state.wave + ') +' + sim.gold + '🪙';
+          }
+        }
+        if (gw + gi + gs > 0 || wavesGranted > 0) {
           setTimeout(function() { showSaveToast(toastMsg, false); }, 600);
         }
       }
@@ -4393,7 +4808,7 @@
     state.grandPrestige.ritualCount++;
 
     if (!grandLvl('eternalFoundations')) {
-      state.stats = { bestWave: 1, totalKills: 0, bossesKilled: 0, gamesOver: 0 };
+      state.stats = { bestWave: 1, totalKills: 0, bossesKilled: 0, gamesOver: 0, offlineWavesCleared: 0 };
       state.killsByType = {};
     }
 
@@ -4477,6 +4892,11 @@
     { id: 'waveTen', icon: '🌊', name: 'Getting Started', desc: 'Reach Wave 10.', check: function() { return state.stats.bestWave >= 10; }, bonuses: [{ type: 'hearth', value: 10 }] },
     { id: 'waveFifty', icon: '🌊', name: 'Battle-Hardened', desc: 'Reach Wave 50.', check: function() { return state.stats.bestWave >= 50; }, bonuses: [{ type: 'hearth', value: 20 }] },
     { id: 'waveHundred', icon: '🌊', name: 'Century Hold', desc: 'Reach Wave 100.', check: function() { return state.stats.bestWave >= 100; }, bonuses: [{ type: 'hearth', value: 30 }] },
+    { id: 'waveTwoHundred', icon: '🌪️', name: 'Unbroken Line', desc: 'Reach Wave 200.', check: function() { return state.stats.bestWave >= 200; }, bonuses: [{ type: 'hearth', value: 40 }, { type: 'dmg', value: 0.02 }] },
+    { id: 'waveThreeHundred', icon: '🌪️', name: 'Endless Vigil', desc: 'Reach Wave 300.', check: function() { return state.stats.bestWave >= 300; }, bonuses: [{ type: 'hearth', value: 50 }, { type: 'dmg', value: 0.02 }] },
+    { id: 'waveFiveHundred', icon: '⚡', name: 'Half Millennium', desc: 'Reach Wave 500.', check: function() { return state.stats.bestWave >= 500; }, bonuses: [{ type: 'dmg', value: 0.04 }, { type: 'gold', value: 0.04 }] },
+    { id: 'waveSevenFifty', icon: '⚡', name: 'The Long Siege', desc: 'Reach Wave 750.', check: function() { return state.stats.bestWave >= 750; }, bonuses: [{ type: 'dmg', value: 0.05 }, { type: 'gold', value: 0.05 }] },
+    { id: 'waveThousand', icon: '🏔️', name: 'Millennial Hearth', desc: 'Reach Wave 1,000.', check: function() { return state.stats.bestWave >= 1000; }, bonuses: [{ type: 'dmg', value: 0.06 }, { type: 'gold', value: 0.06 }, { type: 'hearth', value: 60 }] },
     { id: 'bossHunter', icon: '👑', name: 'Boss Hunter', desc: 'Slay 25 Demon Lords.', check: function() { return state.stats.bossesKilled >= 25; }, bonuses: [{ type: 'dmg', value: 0.02 }] },
     { id: 'treasureFinder', icon: '💰', name: 'Treasure Finder', desc: 'Slay your first Treasure Demon.', check: function() { return (state.killsByType.treasure || 0) >= 1; }, bonuses: [{ type: 'gold', value: 0.05 }] },
     { id: 'treasureHoarder', icon: '💰', name: 'Treasure Hoarder', desc: 'Slay 10 Treasure Demons.', check: function() { return (state.killsByType.treasure || 0) >= 10; }, bonuses: [{ type: 'gold', value: 0.10 }] },
@@ -4494,7 +4914,9 @@
     { id: 'relicCollector', icon: '🏺', name: 'Relic Collector', desc: 'Claim all 5 biome Relics.', check: function() { return relicCount() >= 5; }, bonuses: [{ type: 'dmg', value: 0.05 }] },
     { id: 'fullyGeared', icon: '⚙️', name: 'Fully Geared', desc: 'Equip 3 pieces of gear on a single tower.', check: function() { return maxGearOnAnyTower() >= 3; }, bonuses: [{ type: 'dmg', value: 0.03 }] },
     { id: 'towerMaster', icon: '🏹', name: 'Tower Master', desc: 'Upgrade any tower to Level 15.', check: function() { return bestTowerLevel() >= 15; }, bonuses: [{ type: 'dmg', value: 0.04 }] },
-    { id: 'ironclad', icon: '🧱', name: 'Ironclad', desc: 'Upgrade a Wall or Barracks Tower to Level 10.', check: function() { return bestBlockerLevel() >= 10; }, bonuses: [{ type: 'hearth', value: 15 }] }
+    { id: 'ironclad', icon: '🧱', name: 'Ironclad', desc: 'Upgrade a Wall or Barracks Tower to Level 10.', check: function() { return bestBlockerLevel() >= 10; }, bonuses: [{ type: 'hearth', value: 15 }] },
+    { id: 'nightWatch', icon: '🌙', name: 'Night Watch', desc: 'Come back to find your garrison held the line while you were away.', check: function() { return (state.stats.offlineWavesCleared || 0) >= 1; }, bonuses: [{ type: 'gold', value: 0.02 }] },
+    { id: 'absenteeLandlord', icon: '💤', name: 'Absentee Landlord', desc: 'Clear 200 total waves while offline.', check: function() { return (state.stats.offlineWavesCleared || 0) >= 200; }, bonuses: [{ type: 'gold', value: 0.05 }] }
   ];
   function achievementBonusTotal(type) {
     var sum = 0;
