@@ -707,6 +707,8 @@
   .tut-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--steel); transition: background 0.2s, transform 0.2s; }
   .tut-dot.active { background: var(--gold); transform: scale(1.3); }
   .tut-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 14px; gap: 10px; }
+  .tut-nav-actions { display: flex; gap: 8px; align-items: center; }
+  .tut-back[disabled] { opacity: 0.4; cursor: default; }
   .tut-skip { font-size: 10px; color: var(--ash-dim); cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
   .tut-skip:hover { color: var(--ash); }
   .help-btn {
@@ -847,7 +849,10 @@
   <div class="tut-dots" id="tut-dots"></div>
   <div class="tut-nav">
     <span class="tut-skip" id="tut-skip">Skip</span>
-    <button class="btn" id="tut-next">Next</button>
+    <div class="tut-nav-actions">
+      <button class="btn tut-back" id="tut-back" disabled>Back</button>
+      <button class="btn" id="tut-next">Next</button>
+    </div>
   </div>
 </div>
 
@@ -1425,14 +1430,21 @@
   function renderAllSlots() { state.slots.forEach(function(s, i) { renderSlot(i); }); }
 
   var openMenuEl = null;
+  var openMenuAnchorEl = null;
   function closeSlotMenu() {
     if (openMenuEl) {
       var el = openMenuEl;
       el.classList.remove('show');
       setTimeout(function() { el.remove(); }, 150);
       openMenuEl = null;
+      openMenuAnchorEl = null;
     }
   }
+  document.addEventListener('pointerdown', function(event) {
+    if (!openMenuEl) return;
+    if (openMenuEl.contains(event.target) || (openMenuAnchorEl && openMenuAnchorEl.contains(event.target))) return;
+    closeSlotMenu();
+  });
 
   var ARMORY_HERO_LABELS = { gideon: '🪓 Gideon', dwarf: '🧨 Durgan', warlock: '🔥 Ember', archer: '🏹 Hazel', frost: '❄️ Bramble' };
   function openArmory() {
@@ -1695,6 +1707,7 @@
 
     document.body.appendChild(menu);
     openMenuEl = menu;
+    openMenuAnchorEl = anchorEl;
     var rect = anchorEl.getBoundingClientRect();
     var menuRect = menu.getBoundingClientRect();
     var left = rect.left + rect.width / 2 - menuRect.width / 2;
@@ -4331,6 +4344,24 @@
     { icon: '⏸', title: 'Take Your Time', body: "Use Pause, Play, and the speed toggle here to control the pace — it cycles 1x/2x by default, and unlocks a full 3x after beating the Inferno Torrent Ashen Trial. Good luck — the Hearth is counting on you.",
       target: function() { return document.querySelector('.speed-controls'); } }
   ];
+  var TUTORIAL_COPY = [
+    'Demons march from the south Hell Portal to your Hearth. Keep its HP above zero to survive the run.',
+    'Play building minigames for Wood, Iron, Stone, Grunts, and Captains. Accurate taps and streaks pay more.',
+    'Tap an empty roadside slot to place blockers or hero towers. Grunts and Walls do no damage, so cover every blocked lane with a damage tower.',
+    'Placed damage towers can target Farthest, Nearest, Highest Health, or Fastest. Use heavy hits on Brutes and bosses, and fast fire on Swarmers.',
+    'Barracks Towers fight and use trained Captains as their garrison. Put a Grunt beside a Wall or Barracks Tower to repair it automatically.',
+    'Hire heroes at the Tavern to unlock their tower and cooldown ability. Save abilities for boss waves, which arrive every fifth wave.',
+    'Craft tower gear at the Armory. Towers start with one gear slot; Gear Tech raises this to three. Choose gear that covers each tower\'s weakness.',
+    'Demons drop Gold. Spend it on permanent Research; the Library also holds the Codex, Trophies, and this tour.',
+    'Send up to three heroes on turn-based Hell missions for Gold, Shards, and biomes every 10 levels. Clear each first Demon Lord\'s Chamber for its permanent universal Relic.',
+    'At Wave 10, reset buildings, heroes, towers, and wave progress for permanent Ember Shards. Later resets pay more, but reset before progress stalls.',
+    'Shards survive resets. Spend them on permanent power, health, and faster starts; large totals also unlock village Shard Tiers.',
+    'Ashen Trials are risk-free challenge runs unlocked by Prestige Tier. Beat them for permanent rewards; earlier rewards help with later Trials.',
+    'The optional, irreversible Great Ritual resets everything, including Shard Prestige, for Abyssal Cores on a three-branch endgame tree. Use it only when Prestige slows.',
+    'Use Pause, Play, and speed controls. Speed cycles 1x/2x; Inferno Torrent unlocks 3x. Good luck - protect the Hearth.'
+  ];
+  TUTORIAL_STEPS.forEach(function(step, index) { step.body = TUTORIAL_COPY[index]; });
+
   var tutStepIdx = 0;
   var wasPausedBeforeTutorial = false;
   var tutSpotlight = document.getElementById('tut-spotlight');
@@ -4339,6 +4370,7 @@
   var tutTitle = document.getElementById('tut-title');
   var tutBody = document.getElementById('tut-body');
   var tutDots = document.getElementById('tut-dots');
+  var tutBack = document.getElementById('tut-back');
   var tutNext = document.getElementById('tut-next');
   var tutSkip = document.getElementById('tut-skip');
 
@@ -4406,6 +4438,7 @@
       dot.className = 'tut-dot' + (i === tutStepIdx ? ' active' : '');
       tutDots.appendChild(dot);
     });
+    tutBack.disabled = tutStepIdx === 0;
     tutNext.textContent = tutStepIdx === TUTORIAL_STEPS.length - 1 ? "Let's Go!" : 'Next';
 
     var target = step.target();
@@ -4447,6 +4480,12 @@
     SFX.click();
     if (tutStepIdx === TUTORIAL_STEPS.length - 1) { closeTutorial(); return; }
     tutStepIdx++;
+    showTutStep();
+  });
+  tutBack.addEventListener('click', function() {
+    if (tutStepIdx === 0) return;
+    SFX.click();
+    tutStepIdx--;
     showTutStep();
   });
   tutSkip.addEventListener('click', closeTutorial);
